@@ -5,6 +5,13 @@ from matplotlib import cm
 from matplotlib import rc
 
 
+rc("text", usetex=False)
+rc("mathtext", fontset="custom")
+rc("mathtext", default="regular")
+rc("font",**{"family":"serif",
+                "serif":["EB Garamond"],
+                "size":14})
+
 class Plotter():
 
     @staticmethod
@@ -19,18 +26,30 @@ class Plotter():
         outfile_welfare = outfolder + "/" + "welfare_" + allstats.name
         outfile_time = outfolder + "/" + "time_" + allstats.name
 
-        rc("text", usetex=False)
-        rc("mathtext", fontset="custom")
-        rc("mathtext", default="regular")
-        rc("font",**{"family":"serif",
-                     "serif":["EB Garamond"],
-                     "size":14})
-
         Plotter.__boxplot_average_case(welfares, allstats.algos, outfile_welfare,
                              ylabel="% of optimal welfare (CPLEX)")
         Plotter.__boxplot_average_case(times, allstats.algos, outfile_time,
                              top=100000, bottom=0.01, ylog=True,
                              ylabel="% of time of optimal algorithm (CPLEX)")
+
+    @staticmethod
+    def plot_random(randstats, outfolder):
+        outfile = outfolder + "/random_" + randstats.name
+        welfares = randstats.df[['instance','algorithm','welfare']]
+
+        # normalize welfare by average value on each instance
+        welfares_means = pd.DataFrame(welfares.groupby(['instance', 'algorithm']).mean().welfare.reset_index(name='mean_welfare'))
+        welfares = welfares.merge(welfares_means)
+        welfares[['welfare']] = welfares.welfare.div(welfares.mean_welfare, axis=0) * 100. - 100.
+        welfares = welfares.dropna()
+
+        print(welfares.index)
+        #welfares = welfares.pivot(columns='algorithm', values='welfare')
+
+        #Plotter.__boxplot_average_case(welfares, randstats.algos, outfile,
+        #                               bottom=-100, top=100,
+        #                               ylabel = "difference to mean welfare (%)")
+
 
     @staticmethod
     def __boxplot_average_case(data, algos, filename,
@@ -70,7 +89,7 @@ class Plotter():
         means = [bp["means"][i].get_ydata()[0] for i in range(0, numBoxes)]
         upperLabels = [str(np.round(s, 2)) for s in means]
         if ylog:
-            labelpos = top - (top*0.6)
+            labelpos = top - (top * 0.6)
         else:
             labelpos = top - (top * 0.07)
         for tick, label in zip(range(numBoxes), ax1.get_xticklabels()):

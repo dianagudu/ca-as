@@ -50,8 +50,9 @@ class StatsLoader():
             stats = pd.read_csv(stats_file, header=None,
                                 names=self.schema.keys(), dtype=self.schema)
             # filter out non-stochastic algos
-            stats = stats[stats.algorithm in
-                          [x.name for x in Stochastic_Algorithm_Names]]
+            stats = stats[stats.algorithm.isin(
+                          [x.name for x in Stochastic_Algorithm_Names]
+                          )]
             randstats = randstats.append(stats, ignore_index=True)
         return RandStats(self.name, randstats)
 
