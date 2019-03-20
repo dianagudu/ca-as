@@ -5,10 +5,11 @@ from cause.helper import Heuristic_Algorithm_Names
 
 
 class Breakdown():
-    def __init__(self, data, weights, algos):
+    def __init__(self, data, weights, algos, name):
         self.__data = data
         self.__weights = weights
         self.__algos = algos
+        self.__name = name
         # todo validate input:
         # data is an np.array with dims (num algos, num weights)
 
@@ -24,7 +25,12 @@ class Breakdown():
     def algos(self):
         return self.__algos
 
-    def save_to_latex(self, outfile, weight=1.):
+    @property
+    def name(self):
+        return self.__name
+
+    def save_to_latex(self, outfolder="/tmp", weight=1.):
+        outfile = outfolder + "/breakdown_" + self.name
         index = np.where(self.weights==weight)[0][0]  # location for lambda=weight
         breakdown_perc = self.data[:,index] * 100. / self.data[:,index].sum()
         # write latex table to file
@@ -41,7 +47,7 @@ class Postprocessor():
     def stats(self):
         return self.__stats
 
-    def get_breakdown(self, weights, outfolder="/tmp"):
+    def get_breakdown(self, weights):
         # extract welfares and times from stats
         welfares = self.stats.get_welfares_feasible()
         times = self.stats.get_times_feasible()
@@ -52,16 +58,10 @@ class Postprocessor():
         # infeasible instance (cplex welfare is 0.) get cw = 0.
         #cw = cw.fillna(0.)
 
-        breakdown = Postprocessor.__breakdown(cw, ct, weights)
-
-        # save to file for latex table
-        outfile = outfolder + "/breakdown_" + self.stats.name
-        breakdown.save_to_latex(outfile)
-
-        return breakdown
+        return Postprocessor.__breakdown(cw, ct, weights, self.stats.name)
 
     @staticmethod
-    def __breakdown(cw, ct, weights):
+    def __breakdown(cw, ct, weights, name):
         halgos = [a.name for a in Heuristic_Algorithm_Names]
         cw = cw[halgos]
         ct = ct[halgos]
@@ -87,4 +87,4 @@ class Postprocessor():
                 breakdown = np.vstack([breakdown, column])
         breakdown = np.transpose(breakdown)
 
-        return Breakdown(breakdown, weights, halgos)
+        return Breakdown(breakdown, weights, halgos, name)

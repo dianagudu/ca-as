@@ -3,16 +3,37 @@ import pandas as pd
 import pylab as plt
 from matplotlib import cm
 from matplotlib import rc
+import seaborn as sns
 
-
-rc("text", usetex=False)
-rc("mathtext", fontset="custom")
-rc("mathtext", default="regular")
-rc("font",**{"family":"serif",
-                "serif":["EB Garamond"],
-                "size":14})
 
 class Plotter():
+    @staticmethod
+    def __set_rc_params(fontsize=14):
+        rc("text", usetex=False)
+        rc("mathtext", fontset="custom")
+        rc("mathtext", default="regular")
+        rc("font",**{"family":"serif",
+                        "serif":["EB Garamond"],
+                        "size":fontsize})
+
+    @staticmethod
+    def plot_breakdown(breakdown, outfolder="/tmp"):
+        Plotter.__set_rc_params(18)
+        f, ax = plt.subplots(figsize=(16, 9))
+        snsplot = sns.heatmap(breakdown.data \
+                            , cmap=sns.cubehelix_palette(50,hue=0.05,rot=0,light=0.9,dark=0.2,as_cmap=True) \
+                            #, square=True \
+                            , ax=ax \
+                            , annot=True, fmt="d", annot_kws={"fontsize": 16} \
+                            , cbar=True \
+                            )
+        snsplot.set_xticklabels(breakdown.weights, rotation = 0, fontsize = 18)
+        snsplot.set_yticklabels(breakdown.algos[::-1], rotation = 0, fontsize = 18)
+        snsplot.set_xlabel("$\lambda$", fontsize=18)
+        # increase fontsize for colorbar
+        ax.collections[0].colorbar.ax.tick_params(labelsize=16)
+        outfile = outfolder + "/breakdown_" + breakdown.name + ".png"
+        snsplot.get_figure().savefig(outfile, bbox_inches="tight", dpi=300)
 
     @staticmethod
     def plot_average_case(allstats, outfolder):
@@ -57,6 +78,9 @@ class Plotter():
                                bottom=-10, top=110,
                                ylog=False,
                                ylabel="\% of optimal"):
+        # reset seaborn settings
+        sns.reset_orig()
+        Plotter.__set_rc_params()
         fig, ax1 = plt.subplots(figsize=(8, 5))
         plt.subplots_adjust(left=0.075, right=0.95, top=0.9, bottom=0.25)
         bp = plt.boxplot(data, notch=1, vert=1, whis=[5, 95],
@@ -114,6 +138,9 @@ class Plotter():
 
     @staticmethod
     def __boxplot_random(data, algos, outfile):
+        # reset seaborn settings
+        sns.reset_orig()
+        Plotter.__set_rc_params()
         fig, ax1 = plt.subplots(figsize=(8, 5))
         plt.subplots_adjust(left=0.075, right=0.95, top=0.9, bottom=0.25)
         bp = plt.boxplot(data, notch=1, vert=False, whis=[5, 95],\

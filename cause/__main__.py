@@ -14,7 +14,12 @@ allstats = sl.load()
 
 postp = Postprocessor(allstats)
 
+# get breakdown of dataset by best algorithm
 weights = np.arange(0, 1.1, 0.1)
 breakdown = postp.get_breakdown(weights)
 
-print(breakdown)
+# save to file for latex table
+#breakdown.save_to_latex("/tmp")
+
+# plot breakdown as heatmap
+Plotter.plot_breakdown(breakdown)
