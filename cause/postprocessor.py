@@ -1,145 +1,90 @@
 import numpy as np
 import pandas as pd
-import pylab as plt
-from matplotlib import cm
-from matplotlib import rc
+
+from cause.helper import Heuristic_Algorithm_Names
 
 
-rc("text", usetex=False)
-rc("mathtext", fontset="custom")
-rc("mathtext", default="regular")
-rc("font",**{"family":"serif",
-                "serif":["EB Garamond"],
-                "size":14})
+class Breakdown():
+    def __init__(self, data, weights, algos):
+        self.__data = data
+        self.__weights = weights
+        self.__algos = algos
+        # todo validate input:
+        # data is an np.array with dims (num algos, num weights)
 
-class Plotter():
+    @property
+    def data(self):
+        return self.__data
 
-    @staticmethod
-    def plot_average_case(allstats, outfolder):
-        welfares = allstats.get_welfares_feasible()
-        times = allstats.get_times_feasible()
+    @property
+    def weights(self):
+        return self.__weights
 
-        # normalize welfare and time by values of optimal algorithm (cplex)
-        welfares = welfares.div(welfares.CPLEX, axis=0).multiply(100., axis=0)
-        times = times.div(times.CPLEX, axis=0).multiply(100., axis=0)
+    @property
+    def algos(self):
+        return self.__algos
 
-        outfile_welfare = outfolder + "/" + "welfare_" + allstats.name
-        outfile_time = outfolder + "/" + "time_" + allstats.name
-
-        Plotter.__boxplot_average_case(welfares.values, allstats.algos, outfile_welfare,
-                             ylabel="% of optimal welfare (CPLEX)")
-        Plotter.__boxplot_average_case(times.values, allstats.algos, outfile_time,
-                             top=100000, bottom=0.01, ylog=True,
-                             ylabel="% of time of optimal algorithm (CPLEX)")
-
-    @staticmethod
-    def plot_random(randstats, outfolder):
-        outfile = outfolder + "/random_" + randstats.name
-        welfares = randstats.df[['instance','algorithm','welfare']]
-
-        # normalize welfare by average value on each instance
-        welfares_means = pd.DataFrame(welfares.groupby(['instance', 'algorithm']).welfare.mean().reset_index(name='mean_welfare'))
-        welfares = welfares.merge(welfares_means)
-        #welfares[['welfare']] = welfares.welfare.div(welfares.mean_welfare, axis=0) * 100. - 100.
-        welfares.eval('welfare = (welfare / mean_welfare - 1.) * 100.', inplace=True)
-        welfares = welfares.dropna()
-
-        data = []
-        for algo in randstats.algos:
-            data.append(welfares[welfares.algorithm == algo].welfare.values)
-            print("[" + algo + "]", "min =", welfares[welfares.algorithm == algo].welfare.min(),
-                                  ", max =", welfares[welfares.algorithm == algo].welfare.max())
-        Plotter.__boxplot_random(data, randstats.algos, outfile)
+    def save_to_latex(self, outfile, weight=1.):
+        index = np.where(self.weights==weight)[0][0]  # location for lambda=weight
+        breakdown_perc = self.data[:,index] * 100. / self.data[:,index].sum()
+        # write latex table to file
+        with open(outfile, 'w') as f:
+            for algo in range(self.data.shape[0]):
+                f.write("&\t%s\t&\t%.2f\\%%\t\t\n" % (self.data[algo, index], breakdown_perc[algo]))
 
 
-    @staticmethod
-    def __boxplot_average_case(data, algos, filename,
-                               bottom=-10, top=110,
-                               ylog=False,
-                               ylabel="\% of optimal"):
-        fig, ax1 = plt.subplots(figsize=(8, 5))
-        plt.subplots_adjust(left=0.075, right=0.95, top=0.9, bottom=0.25)
-        bp = plt.boxplot(data, notch=1, vert=1, whis=[5, 95],
-                         bootstrap=100, showmeans=True, showfliers=True)
-        plt.setp(bp["boxes"], color="black")
-        plt.setp(bp["whiskers"], color="black")
-        plt.setp(bp["fliers"], color="grey",
-                 marker=".", mew=0.5, mec="grey", markersize=3.5)
-        plt.setp(bp["means"], color="red",
-                 marker="*", mec="red", mfc="red", mew=0.5)
-        plt.setp(bp["medians"], color="blue")
-        # add a horizontal grid to the plot, but make it very light in color
-        # so we can use it for reading data values but not be distracting
-        ax1.xaxis.grid(True, linestyle="-", which="major", color="lightgrey", alpha=0.5)
-        ax1.yaxis.grid(True, linestyle="-", which="major", color="lightgrey", alpha=0.5)
-        # hide grid behind plot objects
-        ax1.set_axisbelow(True)
-        ax1.set_xlabel("algorithm")
-        ax1.set_ylabel(ylabel)
-        # axis limits
-        ax1.set_ylim(bottom, top)
-        if ylog:
-            ax1.set_yscale("log")
-        # Due to the Y-axis scale being different across samples, it can be
-        # hard to compare differences in medians across the samples. Add upper
-        # X-axis tick labels with the sample medians to aid in comparison
-        # (just use two decimal places of precision)
-        numBoxes = len(algos)
-        pos = np.arange(numBoxes) + 1
-        medians = [bp["medians"][i].get_ydata()[0] for i in range(0, numBoxes)]
-        means = [bp["means"][i].get_ydata()[0] for i in range(0, numBoxes)]
-        upperLabels = [str(np.round(s, 2)) for s in means]
-        if ylog:
-            labelpos = top - (top * 0.6)
-        else:
-            labelpos = top - (top * 0.07)
-        for tick, label in zip(range(numBoxes), ax1.get_xticklabels()):
-            k = tick % 2
-            ax1.text(pos[tick], labelpos, upperLabels[tick],
-                     horizontalalignment="center", size="x-small", color="r")
-        # tick labels
-        xtickNames = plt.setp(
-            # ax1, xticklabels=["\\textsc{%s}" % a.lower() for a in algos])
-            ax1, xticklabels=algos)
-        plt.setp(xtickNames, rotation=45, fontsize=10)
-        # Finally, add a basic legend
-        plt.figtext(0.795, 0.09, "-", color="blue", weight="roman", size="medium")
-        plt.figtext(0.815, 0.092, " median value", color="black", weight="roman", size="x-small")
-        plt.figtext(0.795, 0.058, "*", color="red", weight="roman", size="medium")
-        plt.figtext(0.815, 0.07, " average value", color="black", weight="roman", size="x-small")
-        plt.figtext(0.7965, 0.045, "o", color="grey", weight="roman", size="x-small")
-        plt.figtext(0.815, 0.045, " outliers", color="black", weight="roman", size="x-small")
+class Postprocessor():
+    def __init__(self, stats):
+        self.__stats = stats
 
-        plt.savefig(filename, bbox_inches="tight", dpi=300)
+    @property
+    def stats(self):
+        return self.__stats
+
+    def get_breakdown(self, weights, outfolder="/tmp"):
+        # extract welfares and times from stats
+        welfares = self.stats.get_welfares_feasible()
+        times = self.stats.get_times_feasible()
+
+        # normalize to obtain cost of welfare and time for each algorithm
+        cw = 1. - welfares.div(welfares.CPLEX, axis=0)
+        ct = times.div(times.CPLEX, axis=0)
+        # infeasible instance (cplex welfare is 0.) get cw = 0.
+        #cw = cw.fillna(0.)
+
+        breakdown = Postprocessor.__breakdown(cw, ct, weights)
+
+        # save to file for latex table
+        outfile = outfolder + "/breakdown_" + self.stats.name
+        breakdown.save_to_latex(outfile)
+
+        return breakdown
 
     @staticmethod
-    def __boxplot_random(data, algos, outfile):
-        fig, ax1 = plt.subplots(figsize=(8, 5))
-        plt.subplots_adjust(left=0.075, right=0.95, top=0.9, bottom=0.25)
-        bp = plt.boxplot(data, notch=1, vert=False, whis=[5, 95],\
-                        bootstrap=100, showmeans=True, showfliers=True)
-        plt.setp(bp['boxes'], color='black')
-        plt.setp(bp['whiskers'], color='black')
-        plt.setp(bp['fliers'], color='grey', marker='.', mew=0.5, mec='grey', markersize=3.5)
-        plt.setp(bp['means'], color='red', marker='*', mec='red', mfc='red')
-        plt.setp(bp['medians'], color='blue')
-        ax1.xaxis.grid(True, linestyle='-', which='major', color='lightgrey', alpha=0.5)
-        ax1.yaxis.grid(True, linestyle='-', which='major', color='lightgrey', alpha=0.5)
-        # hide grid behind plot objects
-        ax1.set_axisbelow(True)
-        ytickNames = plt.setp(ax1, yticklabels=algos)
-        ax1.set_xlim(-100, 100)
-        plt.xlabel("difference to mean welfare (%)")
-        # finally, add a basic legend
-        plt.figtext(0.795, 0.13, '-', color='blue', weight='roman', size='medium')
-        plt.figtext(0.815, 0.132, ' median value', color='black', weight='roman', size='small')
-        plt.figtext(0.795, 0.098, '*', color='red', weight='roman', size='medium')
-        plt.figtext(0.815, 0.11, ' average value', color='black', weight='roman', size='small')
-        plt.figtext(0.7965, 0.085, 'o', color='grey', weight='roman', size='small')
-        plt.figtext(0.815, 0.085, ' outliers', color='black', weight='roman', size='small')
-        plt.savefig(outfile, bbox_inches='tight', dpi=300)
-        
-        for i in range(len(algos)):
-            print(ytickNames[i], bp['boxes'][i].get_xdata())
-        for ws in bp['whiskers']:
-            print(ws.get_xdata())
+    def __breakdown(cw, ct, weights):
+        halgos = [a.name for a in Heuristic_Algorithm_Names]
+        cw = cw[halgos]
+        ct = ct[halgos]
+        breakdown = np.empty(shape=(0,0))
+        for weight in weights:
+            # compute cost for weight
+            costs = ((weight**2 * cw.pow(2)).add((1-weight)**2 * ct.pow(2))).pow(0.5)
+
+            # get winners for weight
+            y = costs.apply(lambda x: x.idxmin(), axis=1).values
+            y = np.array([halgos.index(algo) for algo in y])
+
+            # get breakdown by class
+            elements, counts = np.unique(y, return_counts=True)
+
+            # create column for weight and add to matrix
+            column = [counts[np.where(elements == algo)[0]] for algo in range(len(halgos))]
+            column = [0 if column[i].size == 0 else column[i][0] for i in range(0, len(column))]
+            column = np.asarray(column)
+            if breakdown.shape[0] == 0:
+                breakdown = column
+            else:
+                breakdown = np.vstack([breakdown, column])
+        breakdown = np.transpose(breakdown)
+
+        return Breakdown(breakdown, weights, halgos)

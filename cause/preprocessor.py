@@ -2,9 +2,9 @@ import numpy as np
 import pandas as pd
 import glob
 
-from .helper import Algorithm_Names
-from .helper import Stochastic_Algorithm_Names
-from .helper import Heuristic_Algorithm_Names
+from cause.helper import Algorithm_Names
+from cause.helper import Stochastic_Algorithm_Names
+from cause.helper import Heuristic_Algorithm_Names
 
 
 class StatsLoader():
