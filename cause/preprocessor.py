@@ -116,6 +116,10 @@ class RandStats(AllStats):
         super().__init__(name=name, df=df)
         self.__algos = [x.name for x in Stochastic_Algorithm_Names]
 
+    @property
+    def algos(self):
+        return self.__algos
+
 
 class HeuristicStats(AllStats):
 
