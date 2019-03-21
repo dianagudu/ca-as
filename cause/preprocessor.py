@@ -32,6 +32,7 @@ class StatsPreprocessor():
             index='instance', columns='algorithm', values='costw')
 
         return ProcessedStats(self.stats.name,
+                              self.stats.algos,
                               self.stats.get_welfares(),
                               self.stats.get_times(),
                               costw[self.stats.algos],

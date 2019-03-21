@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 
 from .helper import Algorithm_Names
@@ -6,6 +7,7 @@ from .plotter import Plotter
 
 
 class RawStats():
+
     def __init__(self, name, df, algos):
         self.__name = name
         self.__df = df
@@ -32,12 +34,14 @@ class RawStats():
         return self.__algos
 
     def get_welfares(self):
-        welfares = self.df.pivot(index='instance', columns='algorithm', values='welfare')
+        welfares = self.df.pivot(
+            index='instance', columns='algorithm', values='welfare')
         # reorders columns
         return welfares[self.algos]
 
     def get_times(self):
-        times = self.df.pivot(index='instance', columns='algorithm', values='time')
+        times = self.df.pivot(
+            index='instance', columns='algorithm', values='time')
         return times[self.algos]
 
     def save(self, filename):
@@ -49,6 +53,7 @@ class RawStats():
 
 
 class RawStatsOptimal(RawStats):
+
     def __init__(self, name, df):
         super().__init__(name, df, [x.name for x in Algorithm_Names])
 
@@ -86,8 +91,10 @@ class RawStatsOptimal(RawStats):
 
 
 class RawStatsRandom(RawStats):
+
     def __init__(self, name, df):
-        super().__init__(name, df, [x.name for x in Stochastic_Algorithm_Names])
+        super().__init__(
+            name, df, [x.name for x in Stochastic_Algorithm_Names])
 
     def get_welfares(self):
         return self.df[['instance', 'algorithm', 'welfare']]
@@ -120,8 +127,10 @@ class RawStatsRandom(RawStats):
 
 
 class ProcessedStats():
-    def __init__(self, name, welfares, times, costw, costt):
+
+    def __init__(self, name, algos, welfares, times, costw, costt):
         self.__name = name
+        self.__algos = algos
         self.__welfares = welfares
         self.__times = times
         self.__costw = costw
@@ -147,6 +156,10 @@ class ProcessedStats():
     def costt(self):
         return self.__costt
 
+    @property
+    def algos(self):
+        return self.__algos
+
     def save(self, filename):
         pass
 
@@ -156,6 +169,7 @@ class ProcessedStats():
 
 
 class LambdaStats():
+
     def __init__(self, weight, costs, winners):
         self.__weight = weight
         self.__costs = costs
@@ -173,8 +187,17 @@ class LambdaStats():
     def winners(self):
         return self.__winners
 
-    def get_breakdown(self):
-        pass
+    # todo: fix this!
+    def get_breakdown(self, algos):
+        elements, counts = np.unique(self.winners, return_counts=True)
+
+        # create column for weight and add to matrix
+        column = [counts[np.where(elements == algo)[0]]
+                  for algo in range(len(algos))]
+        column = [0 if column[i].size == 0 else column[i][0]
+                  for i in range(0, len(column))]
+        column = np.asarray(column)
+        return column
 
     def save(self, filename):
         pass
