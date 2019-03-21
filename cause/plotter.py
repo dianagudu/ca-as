@@ -7,28 +7,26 @@ import seaborn as sns
 
 
 class Plotter():
+
     @staticmethod
     def __set_rc_params(fontsize=14):
         rc("text", usetex=False)
         rc("mathtext", fontset="custom")
         rc("mathtext", default="regular")
-        rc("font",**{"family":"serif",
-                        "serif":["EB Garamond"],
-                        "size":fontsize})
+        rc("font", **{"family": "serif",
+                      "serif": ["EB Garamond"],
+                      "size": fontsize})
 
     @staticmethod
     def plot_breakdown(breakdown, outfolder="/tmp"):
         Plotter.__set_rc_params(18)
         f, ax = plt.subplots(figsize=(16, 9))
-        snsplot = sns.heatmap(breakdown.data \
-                            , cmap=sns.cubehelix_palette(50,hue=0.05,rot=0,light=0.9,dark=0.2,as_cmap=True) \
-                            #, square=True \
-                            , ax=ax \
-                            , annot=True, fmt="d", annot_kws={"fontsize": 16} \
-                            , cbar=True \
-                            )
-        snsplot.set_xticklabels(breakdown.weights, rotation = 0, fontsize = 18)
-        snsplot.set_yticklabels(breakdown.algos[::-1], rotation = 0, fontsize = 18)
+        snsplot = sns.heatmap(breakdown.data, cmap=sns.cubehelix_palette(50, hue=0.05, rot=0, light=0.9, dark=0.2, as_cmap=True)  # , square=True
+                              , ax=ax, annot=True, fmt="d", annot_kws={"fontsize": 16}, cbar=True
+                              )
+        snsplot.set_xticklabels(breakdown.weights, rotation=0, fontsize=18)
+        snsplot.set_yticklabels(
+            breakdown.algos[::-1], rotation=0, fontsize=18)
         snsplot.set_xlabel("$\lambda$", fontsize=18)
         # increase fontsize for colorbar
         ax.collections[0].colorbar.ax.tick_params(labelsize=16)
@@ -37,6 +35,7 @@ class Plotter():
 
     @staticmethod
     def plot_average_case(allstats, outfolder):
+        # validate allstats instance of RawStatsOptimal
         welfares = allstats.get_welfares_feasible()
         times = allstats.get_times_feasible()
 
@@ -47,31 +46,27 @@ class Plotter():
         outfile_welfare = outfolder + "/" + "welfare_" + allstats.name
         outfile_time = outfolder + "/" + "time_" + allstats.name
 
-        Plotter.__boxplot_average_case(welfares.values, allstats.algos, outfile_welfare,
-                             ylabel="% of optimal welfare (CPLEX)")
-        Plotter.__boxplot_average_case(times.values, allstats.algos, outfile_time,
-                             top=100000, bottom=0.01, ylog=True,
-                             ylabel="% of time of optimal algorithm (CPLEX)")
+        Plotter.__boxplot_average_case(
+            welfares.values, allstats.algos, outfile_welfare,
+            ylabel="% of optimal welfare (CPLEX)")
+        Plotter.__boxplot_average_case(
+            times.values, allstats.algos, outfile_time,
+            top=100000, bottom=0.01, ylog=True,
+            ylabel="% of time of optimal algorithm (CPLEX)")
 
     @staticmethod
     def plot_random(randstats, outfolder):
+        # validate allstats instance of RawStatsRandom
         outfile = outfolder + "/random_" + randstats.name
-        welfares = randstats.df[['instance','algorithm','welfare']]
-
-        # normalize welfare by average value on each instance
-        welfares_means = pd.DataFrame(welfares.groupby(['instance', 'algorithm']).welfare.mean().reset_index(name='mean_welfare'))
-        welfares = welfares.merge(welfares_means)
-        #welfares[['welfare']] = welfares.welfare.div(welfares.mean_welfare, axis=0) * 100. - 100.
-        welfares.eval('welfare = (welfare / mean_welfare - 1.) * 100.', inplace=True)
-        welfares = welfares.dropna()
-
+        welfares = randstats.get_normalized_welfares()
         data = []
         for algo in randstats.algos:
             data.append(welfares[welfares.algorithm == algo].welfare.values)
-            print("[" + algo + "]", "min =", welfares[welfares.algorithm == algo].welfare.min(),
-                                  ", max =", welfares[welfares.algorithm == algo].welfare.max())
+            print(
+                "[" + algo + "]", "min =", welfares[
+                    welfares.algorithm == algo].welfare.min(),
+                ", max =", welfares[welfares.algorithm == algo].welfare.max())
         Plotter.__boxplot_random(data, randstats.algos, outfile)
-
 
     @staticmethod
     def __boxplot_average_case(data, algos, filename,
@@ -94,8 +89,10 @@ class Plotter():
         plt.setp(bp["medians"], color="blue")
         # add a horizontal grid to the plot, but make it very light in color
         # so we can use it for reading data values but not be distracting
-        ax1.xaxis.grid(True, linestyle="-", which="major", color="lightgrey", alpha=0.5)
-        ax1.yaxis.grid(True, linestyle="-", which="major", color="lightgrey", alpha=0.5)
+        ax1.xaxis.grid(
+            True, linestyle="-", which="major", color="lightgrey", alpha=0.5)
+        ax1.yaxis.grid(
+            True, linestyle="-", which="major", color="lightgrey", alpha=0.5)
         # hide grid behind plot objects
         ax1.set_axisbelow(True)
         ax1.set_xlabel("algorithm")
@@ -122,17 +119,21 @@ class Plotter():
             ax1.text(pos[tick], labelpos, upperLabels[tick],
                      horizontalalignment="center", size="x-small", color="r")
         # tick labels
-        xtickNames = plt.setp(
-            # ax1, xticklabels=["\\textsc{%s}" % a.lower() for a in algos])
-            ax1, xticklabels=algos)
+        xtickNames = plt.setp(ax1, xticklabels=algos)
         plt.setp(xtickNames, rotation=45, fontsize=10)
         # Finally, add a basic legend
-        plt.figtext(0.795, 0.09, "-", color="blue", weight="roman", size="medium")
-        plt.figtext(0.815, 0.092, " median value", color="black", weight="roman", size="x-small")
-        plt.figtext(0.795, 0.058, "*", color="red", weight="roman", size="medium")
-        plt.figtext(0.815, 0.07, " average value", color="black", weight="roman", size="x-small")
-        plt.figtext(0.7965, 0.045, "o", color="grey", weight="roman", size="x-small")
-        plt.figtext(0.815, 0.045, " outliers", color="black", weight="roman", size="x-small")
+        plt.figtext(
+            0.795, 0.09, "-", color="blue", weight="roman", size="medium")
+        plt.figtext(0.815, 0.092, " median value",
+                    color="black", weight="roman", size="x-small")
+        plt.figtext(
+            0.795, 0.058, "*", color="red", weight="roman", size="medium")
+        plt.figtext(0.815, 0.07, " average value",
+                    color="black", weight="roman", size="x-small")
+        plt.figtext(0.7965, 0.045, "o",
+                    color="grey", weight="roman", size="x-small")
+        plt.figtext(0.815, 0.045, " outliers",
+                    color="black", weight="roman", size="x-small")
 
         plt.savefig(filename, bbox_inches="tight", dpi=300)
 
@@ -143,29 +144,38 @@ class Plotter():
         Plotter.__set_rc_params()
         fig, ax1 = plt.subplots(figsize=(8, 5))
         plt.subplots_adjust(left=0.075, right=0.95, top=0.9, bottom=0.25)
-        bp = plt.boxplot(data, notch=1, vert=False, whis=[5, 95],\
-                        bootstrap=100, showmeans=True, showfliers=True)
+        bp = plt.boxplot(data, notch=1, vert=False, whis=[5, 95],
+                         bootstrap=100, showmeans=True, showfliers=True)
         plt.setp(bp['boxes'], color='black')
         plt.setp(bp['whiskers'], color='black')
-        plt.setp(bp['fliers'], color='grey', marker='.', mew=0.5, mec='grey', markersize=3.5)
+        plt.setp(bp['fliers'], color='grey',
+                 marker='.', mew=0.5, mec='grey', markersize=3.5)
         plt.setp(bp['means'], color='red', marker='*', mec='red', mfc='red')
         plt.setp(bp['medians'], color='blue')
-        ax1.xaxis.grid(True, linestyle='-', which='major', color='lightgrey', alpha=0.5)
-        ax1.yaxis.grid(True, linestyle='-', which='major', color='lightgrey', alpha=0.5)
+        ax1.xaxis.grid(
+            True, linestyle='-', which='major', color='lightgrey', alpha=0.5)
+        ax1.yaxis.grid(
+            True, linestyle='-', which='major', color='lightgrey', alpha=0.5)
         # hide grid behind plot objects
         ax1.set_axisbelow(True)
         ytickNames = plt.setp(ax1, yticklabels=algos)
         ax1.set_xlim(-100, 100)
         plt.xlabel("difference to mean welfare (%)")
         # finally, add a basic legend
-        plt.figtext(0.795, 0.13, '-', color='blue', weight='roman', size='medium')
-        plt.figtext(0.815, 0.132, ' median value', color='black', weight='roman', size='small')
-        plt.figtext(0.795, 0.098, '*', color='red', weight='roman', size='medium')
-        plt.figtext(0.815, 0.11, ' average value', color='black', weight='roman', size='small')
-        plt.figtext(0.7965, 0.085, 'o', color='grey', weight='roman', size='small')
-        plt.figtext(0.815, 0.085, ' outliers', color='black', weight='roman', size='small')
+        plt.figtext(
+            0.795, 0.13, '-', color='blue', weight='roman', size='medium')
+        plt.figtext(0.815, 0.132, ' median value',
+                    color='black', weight='roman', size='small')
+        plt.figtext(
+            0.795, 0.098, '*', color='red', weight='roman', size='medium')
+        plt.figtext(0.815, 0.11, ' average value',
+                    color='black', weight='roman', size='small')
+        plt.figtext(0.7965, 0.085, 'o',
+                    color='grey', weight='roman', size='small')
+        plt.figtext(0.815, 0.085, ' outliers',
+                    color='black', weight='roman', size='small')
         plt.savefig(outfile, bbox_inches='tight', dpi=300)
-        
+
         for i in range(len(algos)):
             print(ytickNames[i], bp['boxes'][i].get_xdata())
         for ws in bp['whiskers']:

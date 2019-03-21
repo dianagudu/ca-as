@@ -47,7 +47,7 @@ class Postprocessor():
     def stats(self):
         return self.__stats
 
-    def get_breakdown(self, weights):
+    def get_breakdown_optimal(self, weights):
         # extract welfares and times from stats
         welfares = self.stats.get_welfares_feasible()
         times = self.stats.get_times_feasible()
