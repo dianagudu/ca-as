@@ -2,6 +2,8 @@ import pandas as pd
 
 from .helper import Algorithm_Names
 from .helper import Stochastic_Algorithm_Names
+from .plotter import Plotter
+
 
 class RawStats():
     def __init__(self, name, df, algos):
@@ -59,6 +61,25 @@ class RawStatsOptimal(RawStats):
         index_infeasible = welfares.index[welfares.CPLEX == 0]
         return times.drop(index_infeasible)
 
+    def plot(self, outfolder="/tmp"):
+        outfile_welfare = outfolder + "/" + "welfare_" + self.name
+        outfile_time = outfolder + "/" + "time_" + self.name
+
+        welfares = self.get_welfares_feasible()
+        times = self.get_times_feasible()
+
+        # normalize welfare and time by values of optimal algorithm (cplex)
+        welfares = welfares.div(welfares.CPLEX, axis=0).multiply(100., axis=0)
+        times = times.div(times.CPLEX, axis=0).multiply(100., axis=0)
+
+        Plotter.boxplot_average_case(
+            welfares.values, self.algos, outfile_welfare,
+            ylabel="% of optimal welfare (CPLEX)")
+        Plotter.boxplot_average_case(
+            times.values, self.algos, outfile_time,
+            top=100000, bottom=0.01, ylog=True,
+            ylabel="% of time of optimal algorithm (CPLEX)")
+
 
 class RawStatsRandom(RawStats):
     def __init__(self, name, df):
@@ -70,9 +91,8 @@ class RawStatsRandom(RawStats):
     def get_times(self):
         return self.df[['instance', 'algorithm', 'time']]
 
-    def get_normalized_welfares(self):
+    def __get_normalized_welfares(self):
         welfares = self.get_welfares()
-
         # normalize welfare by average value on each instance
         welfares_means = pd.DataFrame(
             welfares.groupby(['instance', 'algorithm']).welfare.mean().reset_index(name='mean_welfare'))
@@ -81,6 +101,18 @@ class RawStatsRandom(RawStats):
             'welfare = (welfare / mean_welfare - 1.) * 100.', inplace=True)
         welfares = welfares.dropna()
         return welfares
+
+    def plot(self, outfolder="/tmp"):
+        outfile = outfolder + "/random_" + self.name
+        welfares = self.__get_normalized_welfares()
+        data = []
+        for algo in self.algos:
+            data.append(welfares[welfares.algorithm == algo].welfare.values)
+            print(
+                "[" + algo + "]", "min =", welfares[
+                    welfares.algorithm == algo].welfare.min(),
+                ", max =", welfares[welfares.algorithm == algo].welfare.max())
+        Plotter.boxplot_random(data, self.algos, outfile)
 
 
 class ProcessedStats():

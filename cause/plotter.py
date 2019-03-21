@@ -34,42 +34,7 @@ class Plotter():
         snsplot.get_figure().savefig(outfile, bbox_inches="tight", dpi=300)
 
     @staticmethod
-    def plot_average_case(allstats, outfolder):
-        # validate allstats instance of RawStatsOptimal
-        welfares = allstats.get_welfares_feasible()
-        times = allstats.get_times_feasible()
-
-        # normalize welfare and time by values of optimal algorithm (cplex)
-        welfares = welfares.div(welfares.CPLEX, axis=0).multiply(100., axis=0)
-        times = times.div(times.CPLEX, axis=0).multiply(100., axis=0)
-
-        outfile_welfare = outfolder + "/" + "welfare_" + allstats.name
-        outfile_time = outfolder + "/" + "time_" + allstats.name
-
-        Plotter.__boxplot_average_case(
-            welfares.values, allstats.algos, outfile_welfare,
-            ylabel="% of optimal welfare (CPLEX)")
-        Plotter.__boxplot_average_case(
-            times.values, allstats.algos, outfile_time,
-            top=100000, bottom=0.01, ylog=True,
-            ylabel="% of time of optimal algorithm (CPLEX)")
-
-    @staticmethod
-    def plot_random(randstats, outfolder):
-        # validate allstats instance of RawStatsRandom
-        outfile = outfolder + "/random_" + randstats.name
-        welfares = randstats.get_normalized_welfares()
-        data = []
-        for algo in randstats.algos:
-            data.append(welfares[welfares.algorithm == algo].welfare.values)
-            print(
-                "[" + algo + "]", "min =", welfares[
-                    welfares.algorithm == algo].welfare.min(),
-                ", max =", welfares[welfares.algorithm == algo].welfare.max())
-        Plotter.__boxplot_random(data, randstats.algos, outfile)
-
-    @staticmethod
-    def __boxplot_average_case(data, algos, filename,
+    def boxplot_average_case(data, algos, filename,
                                bottom=-10, top=110,
                                ylog=False,
                                ylabel="\% of optimal"):
@@ -138,7 +103,7 @@ class Plotter():
         plt.savefig(filename, bbox_inches="tight", dpi=300)
 
     @staticmethod
-    def __boxplot_random(data, algos, outfile):
+    def boxplot_random(data, algos, outfile):
         # reset seaborn settings
         sns.reset_orig()
         Plotter.__set_rc_params()

@@ -7,10 +7,10 @@ from .postprocessor import Postprocessor
 sl = StatsLoader("/home/diana/ca/stats", "ca-compare-3dims")
 
 allstats = sl.load_optimal()
-Plotter.plot_average_case(allstats, "/tmp")
+allstats.plot()
 
 randstats = sl.load_random()
-Plotter.plot_random(randstats, "/tmp")
+randstats.plot()
 
 postp = Postprocessor(allstats)
 
@@ -22,4 +22,4 @@ breakdown = postp.get_breakdown_optimal(weights)
 breakdown.save_to_latex("/tmp")
 
 # plot breakdown as heatmap
-Plotter.plot_breakdown(breakdown)
+breakdown.plot()

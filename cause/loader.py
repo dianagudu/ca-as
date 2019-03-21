@@ -37,32 +37,33 @@ class StatsLoader():
         return self.__name
 
     def load(self):
-        allstats = pd.DataFrame()
-        for stats_file in sorted(glob.glob(self.infolder + "/*")):
-            stats = pd.read_csv(stats_file, header=None,
-                                names=self.schema.keys(), dtype=self.schema)
-            stats = stats.groupby(
-                ['instance', 'algorithm']).mean().reset_index()
-            allstats = allstats.append(stats, ignore_index=True)
+        allstats = self.__load()
+        # average over multiple runs when needed
+        allstats = allstats.groupby(
+            ['instance', 'algorithm']).mean().reset_index()
+        # filter out non heuristic algos
+        allstats = allstats[allstats.algorithm.isin(
+                [x.name for x in Heuristic_Algorithm_Names])]
         return RawStats(self.name, allstats, [x.name for x in Heuristic_Algorithm_Names])
 
     def load_optimal(self):
+        optstats = self.__load()
+        # average over multiple runs when needed
+        optstats = optstats.groupby(
+            ['instance', 'algorithm']).mean().reset_index()
+        return RawStatsOptimal(self.name, optstats)
+
+    def load_random(self):
+        randstats = self.__load()
+        # filter out non-stochastic algos
+        randstats = randstats[randstats.algorithm.isin(
+                [x.name for x in Stochastic_Algorithm_Names])]
+        return RawStatsRandom(self.name, randstats)
+
+    def __load(self):
         allstats = pd.DataFrame()
         for stats_file in sorted(glob.glob(self.infolder + "/*")):
             stats = pd.read_csv(stats_file, header=None,
                                 names=self.schema.keys(), dtype=self.schema)
-            stats = stats.groupby(
-                ['instance', 'algorithm']).mean().reset_index()
             allstats = allstats.append(stats, ignore_index=True)
-        return RawStatsOptimal(self.name, allstats)
-
-    def load_random(self):
-        randstats = pd.DataFrame()
-        for stats_file in sorted(glob.glob(self.infolder + "/*")):
-            stats = pd.read_csv(stats_file, header=None,
-                                names=self.schema.keys(), dtype=self.schema)
-            # filter out non-stochastic algos
-            stats = stats[stats.algorithm.isin(
-                [x.name for x in Stochastic_Algorithm_Names])]
-            randstats = randstats.append(stats, ignore_index=True)
-        return RawStatsRandom(self.name, randstats)
+        return allstats

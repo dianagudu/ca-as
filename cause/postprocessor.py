@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
 
-from cause.helper import Heuristic_Algorithm_Names
-
+from .helper import Heuristic_Algorithm_Names
+from .plotter import Plotter
 
 class Breakdown():
     def __init__(self, data, weights, algos, name):
@@ -37,6 +37,9 @@ class Breakdown():
         with open(outfile, 'w') as f:
             for algo in range(self.data.shape[0]):
                 f.write("&\t%s\t&\t%.2f\\%%\t\t\n" % (self.data[algo, index], breakdown_perc[algo]))
+
+    def plot(self, outfolder="/tmp"):
+        Plotter.plot_breakdown(self, outfolder)
 
 
 class Postprocessor():
