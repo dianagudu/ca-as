@@ -4,42 +4,38 @@ import glob
 
 from .stats import RawStatsOptimal
 from .stats import ProcessedStats
+from .stats import LambdaStats
 
 
-class Preprocessor():
+class StatsPreprocessor():
 
-    def __init__(self, name, stats):
-        self.__name = name
+    def __init__(self, stats):
         self.__stats = stats
-
-    @property
-    def name(self):
-        return self.__name
 
     @property
     def stats(self):
         return self.__stats
 
     def process(self):
-        if isinstance(stats, RawStatsOptimal):
-            stats = pd.DataFrame(
-                self.stats.groupby('instance')
-                          .apply(Preprocessor.__compute_costs_optimal))
+        if isinstance(self.stats.df, RawStatsOptimal):
+            pstats = pd.DataFrame(
+                self.stats.df.groupby('instance')
+                          .apply(StatsPreprocessor.__compute_costs_optimal))
         else:
-            stats = pd.DataFrame(
-                self.stats.groupby('instance')
-                          .apply(Preprocessor.__compute_costs))
+            pstats = pd.DataFrame(
+                self.stats.df.groupby('instance')
+                          .apply(StatsPreprocessor.__compute_costs))
 
-        costt = self.stats.pivot(
+        costt = pstats.pivot(
             index='instance', columns='algorithm', values='costt')
-        costw = self.stats.pivot(
+        costw = pstats.pivot(
             index='instance', columns='algorithm', values='costw')
 
-        return ProcessedStats(self.name,
-                              stats.get_welfares(),
-                              stats.get_times(),
-                              costw[stats.algos],
-                              costt[stats.algos])  # reorder columns by algo
+        return ProcessedStats(self.stats.name,
+                              self.stats.get_welfares(),
+                              self.stats.get_times(),
+                              costw[self.stats.algos],
+                              costt[self.stats.algos])  # reorder columns by algo
 
     @staticmethod
     def __compute_costs(data):
@@ -70,3 +66,20 @@ class Preprocessor():
 
         data.eval('costt = time / @tcplex', inplace=True)
         return data
+
+
+class LambdaStatsPreprocessor():
+
+    def __init__(self, pstats):
+        self.__pstats = pstats
+
+    @property
+    def pstats(self):
+        return self.__pstats
+
+    def process(self, weight):
+        costs = ((weight * self.pstats.costw) ** 2 +
+                ((1 - weight) * self.pstats.costt) ** 2) ** 0.5
+        winners = costs.idxmin(axis=1)
+        return LambdaStats(weight, costs, winners)
+

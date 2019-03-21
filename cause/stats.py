@@ -154,9 +154,31 @@ class ProcessedStats():
     def load(filename):
         pass
 
-    def get_breakdown(self, weights):
+
+class LambdaStats():
+    def __init__(self, weight, costs, winners):
+        self.__weight = weight
+        self.__costs = costs
+        self.__winners = winners
+
+    @property
+    def weight(self):
+        return self.__weight
+
+    @property
+    def costs(self):
+        return self.__costs
+
+    @property
+    def winners(self):
+        return self.__winners
+
+    def get_breakdown(self):
+        pass
+
+    def save(self, filename):
         pass
 
     @staticmethod
-    def __get_winner(data):
-        return data.loc[data['cost'].idxmin()].algorithm
+    def load(filename):
+        pass
