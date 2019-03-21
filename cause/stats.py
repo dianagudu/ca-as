@@ -31,9 +31,6 @@ class RawStats():
     def algos(self):
         return self.__algos
 
-    def save(self, filename):
-        pass
-
     def get_welfares(self):
         welfares = self.df.pivot(index='instance', columns='algorithm', values='welfare')
         # reorders columns
@@ -42,6 +39,13 @@ class RawStats():
     def get_times(self):
         times = self.df.pivot(index='instance', columns='algorithm', values='time')
         return times[self.algos]
+
+    def save(self, filename):
+        pass
+
+    @staticmethod
+    def load(filename):
+        pass
 
 
 class RawStatsOptimal(RawStats):
@@ -116,15 +120,43 @@ class RawStatsRandom(RawStats):
 
 
 class ProcessedStats():
-    def __init__(self, name, df):
+    def __init__(self, name, welfares, times, costw, costt):
         self.__name = name
-        self.__df = df
-        # df columns: instance, algorithm, welfares, times, costw, costt
+        self.__welfares = welfares
+        self.__times = times
+        self.__costw = costw
+        self.__costt = costt
 
     @property
     def name(self):
         return self.__name
 
     @property
-    def df(self):
-        return self.__df
+    def welfares(self):
+        return self.__welfares
+
+    @property
+    def times(self):
+        return self.__times
+
+    @property
+    def costw(self):
+        return self.__costw
+
+    @property
+    def costt(self):
+        return self.__costt
+
+    def save(self, filename):
+        pass
+
+    @staticmethod
+    def load(filename):
+        pass
+
+    def get_breakdown(self, weights):
+        pass
+
+    @staticmethod
+    def __get_winner(data):
+        return data.loc[data['cost'].idxmin()].algorithm
