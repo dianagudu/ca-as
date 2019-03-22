@@ -193,7 +193,7 @@ class LambdaStats():
 
         # create column for weight and add to matrix
         column = [counts[np.where(elements == algo)[0]]
-                  for algo in range(len(algos))]
+                  for algo in algos]
         column = [0 if column[i].size == 0 else column[i][0]
                   for i in range(0, len(column))]
         column = np.asarray(column)
