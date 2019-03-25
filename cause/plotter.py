@@ -110,7 +110,7 @@ class Plotter():
         fig, ax1 = plt.subplots(figsize=(8, 5))
         plt.subplots_adjust(left=0.075, right=0.95, top=0.9, bottom=0.25)
         bp = plt.boxplot(data, notch=1, vert=False, whis=[5, 95],
-                         bootstrap=100, showmeans=True, showfliers=True)
+                         bootstrap=10, showmeans=True, showfliers=True)
         plt.setp(bp['boxes'], color='black')
         plt.setp(bp['whiskers'], color='black')
         plt.setp(bp['fliers'], color='grey',

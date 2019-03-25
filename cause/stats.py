@@ -239,10 +239,10 @@ class LambdaStats():
         }
 
 class ProcessedDataset():
-    def __init__(self, pstats, weights, l_lstats):
+    def __init__(self, pstats, weights, lstats):
         self.__pstats = pstats
         self.__weights = weights
-        self.__l_lstats = l_lstats
+        self.__lstats = lstats
 
     @property
     def pstats(self):
@@ -253,8 +253,16 @@ class ProcessedDataset():
         return self.__weights
 
     @property
-    def l_lstats(self):
-        return self.__l_lstats
+    def lstats(self):
+        return self.__lstats
+
+    @property
+    def name(self):
+        return self.__pstats.name
+
+    @property
+    def algos(self):
+        return self.__pstats.algos
 
     @staticmethod
     def load(metafile):
@@ -266,8 +274,7 @@ class ProcessedDataset():
     def from_dict(dobj):
         pstats = ProcessedStats.load(dobj["pstats_file"])
         weights = np.array(dobj["weights"])
-        l_lstats = []
-        for weight in weights:
-            lstats = LambdaStats.load(dobj["lstats_files"][weight])
-            l_lstats.append(lstats)
-        return ProcessedDataset(pstats, weights, l_lstats)
+        lstats = {}
+        for weight in weights.tolist():
+            lstats[weight] = LambdaStats.load(dobj["lstats_files"][weight])
+        return ProcessedDataset(pstats, weights, lstats)

@@ -91,7 +91,6 @@ class DatasetCreator():
         pstats_file = outfolder + "/" + name + "_pstats.yaml"
         lstats_files = {}
         for weight in weights.tolist():
-            print(weight)
             lstats_files[weight] = outfolder + "/" + name + "_lstats_" + str(weight) + ".yaml"
         metafile = outfolder + "/" + name + "_meta.yaml"
 

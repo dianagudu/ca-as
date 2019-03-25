@@ -41,24 +41,24 @@ class Breakdown():
     def plot(self, outfolder="/tmp"):
         Plotter.plot_breakdown(self, outfolder)
 
-    @staticmethod
-    def from_lstats(l_lstats, weights, algos, name):
+
+class Postprocessor():
+    def __init__(self, dataset):
+        self.__dataset = dataset
+
+    @property
+    def dataset(self):
+        return self.__dataset
+
+    def breakdown(self):
         breakdown = np.empty(shape=(0,0))
-        for index, weight in enumerate(weights):
-            column = l_lstats[index].get_breakdown(algos)
+        for weight in self.dataset.weights:
+            column = self.dataset.lstats[weight].get_breakdown(self.dataset.algos)
             if breakdown.shape[0] == 0:
                 breakdown = column
             else:
                 breakdown = np.vstack([breakdown, column])
         breakdown = np.transpose(breakdown)
 
-        return Breakdown(breakdown, weights, algos, name)
-
-
-class Postprocessor():
-    def __init__(self, lstats):
-        self.__lstats = lstats
-
-    @property
-    def lstats(self):
-        return self.__lstats
+        return Breakdown(breakdown, self.dataset.weights,
+                         self.dataset.algos, self.dataset.name)
