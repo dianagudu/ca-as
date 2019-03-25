@@ -1,14 +1,14 @@
 import numpy as np
 import pandas as pd
 import glob
+import yaml
 
 from .stats import RawStatsOptimal
 from .stats import ProcessedStats
 from .stats import LambdaStats
-
+from .loader import RawStatsLoader
 
 class StatsPreprocessor():
-
     def __init__(self, stats):
         self.__stats = stats
 
@@ -70,7 +70,6 @@ class StatsPreprocessor():
 
 
 class LambdaStatsPreprocessor():
-
     def __init__(self, pstats):
         self.__pstats = pstats
 
@@ -84,3 +83,38 @@ class LambdaStatsPreprocessor():
         winners = costs.idxmin(axis=1)
         return LambdaStats(weight, costs, winners)
 
+
+class DatasetCreator():
+    @staticmethod
+    def create(weights, infolder, outfolder, name):
+        # filenames
+        pstats_file = outfolder + "/" + name + "_pstats.yaml"
+        lstats_files = {}
+        for weight in weights.tolist():
+            print(weight)
+            lstats_files[weight] = outfolder + "/" + name + "_lstats_" + str(weight) + ".yaml"
+        metafile = outfolder + "/" + name + "_meta.yaml"
+
+        # load raw stats
+        rsl = RawStatsLoader(infolder, name)
+        allstats = rsl.load()
+
+        # process and save raw stats
+        pstats = StatsPreprocessor(allstats).process()
+        pstats.save(pstats_file)
+
+        # process and save lambda stats per weight
+        ls_preproc = LambdaStatsPreprocessor(pstats)
+        for weight in weights:
+            lstats = ls_preproc.process(weight)
+            lstats.save(lstats_files[weight])
+
+        # save dataset metafile
+        dobj = {
+            "pstats_file": pstats_file,
+            "weights": weights.tolist(),
+            "lstats_files": lstats_files
+        }
+
+        with open(metafile, "w") as f:
+            yaml.dump(dobj, f, default_flow_style=False)

@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import yaml
 
 from .helper import Algorithm_Names
 from .helper import Stochastic_Algorithm_Names
@@ -160,12 +161,29 @@ class ProcessedStats():
     def algos(self):
         return self.__algos
 
-    def save(self, filename):
-        pass
-
     @staticmethod
     def load(filename):
-        pass
+        with open(filename, "r") as f:
+            dobj = yaml.load(f)
+        return ProcessedStats.from_dict(dobj)
+
+    def save(self, filename):
+        with open(filename, "w") as f:
+            yaml.dump(self.to_dict(), f)
+
+    @staticmethod
+    def from_dict(dobj):
+        return ProcessedStats(**dobj)
+
+    def to_dict(self):
+        return {
+            "name": self.name,
+            "algos": self.algos,
+            "welfares": self.welfares,
+            "times": self.times,
+            "costw": self.costw,
+            "costt": self.costt
+        }
 
 
 class LambdaStats():
@@ -199,9 +217,57 @@ class LambdaStats():
         column = np.asarray(column)
         return column
 
-    def save(self, filename):
-        pass
-
     @staticmethod
     def load(filename):
-        pass
+        with open(filename, "r") as f:
+            dobj = yaml.load(f)
+        return LambdaStats.from_dict(dobj)
+
+    def save(self, filename):
+        with open(filename, "w") as f:
+            yaml.dump(self.to_dict(), f)
+
+    @staticmethod
+    def from_dict(dobj):
+        return LambdaStats(**dobj)
+
+    def to_dict(self):
+        return {
+            "weight": self.weight,
+            "costs": self.costs,
+            "winners": self.winners
+        }
+
+class ProcessedDataset():
+    def __init__(self, pstats, weights, l_lstats):
+        self.__pstats = pstats
+        self.__weights = weights
+        self.__l_lstats = l_lstats
+
+    @property
+    def pstats(self):
+        return self.__pstats
+
+    @property
+    def weights(self):
+        return self.__weights
+
+    @property
+    def l_lstats(self):
+        return self.__l_lstats
+
+    @staticmethod
+    def load(metafile):
+        with open(metafile, "r") as f:
+            dobj = yaml.load(f)
+        return ProcessedDataset.from_dict(dobj)
+
+    @staticmethod
+    def from_dict(dobj):
+        pstats = ProcessedStats.load(dobj["pstats_file"])
+        weights = np.array(dobj["weights"])
+        l_lstats = []
+        for weight in weights:
+            lstats = LambdaStats.load(dobj["lstats_files"][weight])
+            l_lstats.append(lstats)
+        return ProcessedDataset(pstats, weights, l_lstats)
