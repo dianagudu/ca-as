@@ -7,17 +7,18 @@ from .preprocessor import StatsPreprocessor
 from .postprocessor import Postprocessor
 from .plotter import Plotter
 
-name = "ca-compare-3dims"
+#name = "ca-compare-3dims"
+name = "malaise"
 
 # infolder = "/tmp/stats"   # testing!
 infolder = "/home/diana/ca/stats/" + name
 outfolder = "/tmp/" + name
 
 # 1st workflow: load stats for alg comparison (incl optimal) and plot avg case
-rsl = RawStatsLoader(infolder, name)
+#rsl = RawStatsLoader(infolder, name)
 #rsl.load_optimal().plot(outfolder)
 # 2nd workflow: load stats for alg comparison for stochastic algos and plot
-rsl.load_random().plot(outfolder)
+#rsl.load_random().plot(outfolder)
 
 # 3rd workflow: preprocess dataset (stats for heuristic algos and features)
 #               run prediction using ML, plot and save results
