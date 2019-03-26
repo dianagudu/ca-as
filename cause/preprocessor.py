@@ -9,21 +9,21 @@ from .stats import LambdaStats
 from .loader import RawStatsLoader
 
 class StatsPreprocessor():
-    def __init__(self, stats):
-        self.__stats = stats
+    def __init__(self, rawstats):
+        self.__rawstats = rawstats
 
     @property
-    def stats(self):
-        return self.__stats
+    def rawstats(self):
+        return self.__rawstats
 
     def process(self):
-        if isinstance(self.stats.df, RawStatsOptimal):
+        if isinstance(self.rawstats.df, RawStatsOptimal):
             pstats = pd.DataFrame(
-                self.stats.df.groupby('instance')
+                self.rawstats.df.groupby('instance')
                           .apply(StatsPreprocessor.__compute_costs_optimal))
         else:
             pstats = pd.DataFrame(
-                self.stats.df.groupby('instance')
+                self.rawstats.df.groupby('instance')
                           .apply(StatsPreprocessor.__compute_costs))
 
         costt = pstats.pivot(
@@ -31,12 +31,12 @@ class StatsPreprocessor():
         costw = pstats.pivot(
             index='instance', columns='algorithm', values='costw')
 
-        return ProcessedStats(self.stats.name,
-                              self.stats.algos,
-                              self.stats.get_welfares(),
-                              self.stats.get_times(),
-                              costw[self.stats.algos],
-                              costt[self.stats.algos])  # reorder columns by algo
+        return ProcessedStats(self.rawstats.name,
+                              self.rawstats.algos,
+                              self.rawstats.get_welfares(),
+                              self.rawstats.get_times(),
+                              costw[self.rawstats.algos],
+                              costt[self.rawstats.algos])  # reorder columns by algo
 
     @staticmethod
     def __compute_costs(data):
