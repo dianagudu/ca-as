@@ -8,6 +8,7 @@ from .stats import ProcessedStats
 from .stats import LambdaStats
 from .loader import RawStatsLoader
 
+
 class StatsPreprocessor():
 
     def __init__(self, rawstats):
@@ -21,11 +22,11 @@ class StatsPreprocessor():
         if isinstance(self.rawstats.df, RawStatsOptimal):
             pstats = pd.DataFrame(
                 self.rawstats.df.groupby('instance')
-                          .apply(StatsPreprocessor.__compute_costs_optimal))
+                .apply(StatsPreprocessor.__compute_costs_optimal))
         else:
             pstats = pd.DataFrame(
                 self.rawstats.df.groupby('instance')
-                          .apply(StatsPreprocessor.__compute_costs))
+                .apply(StatsPreprocessor.__compute_costs))
 
         costt = pstats.pivot(
             index='instance', columns='algorithm', values='costt')
@@ -97,10 +98,10 @@ class DatasetCreator():
         metafile = prefix + ".yaml"
 
         # load raw stats
-        allstats = RawStatsLoader(infolder, name).load()
-
         # process and save raw stats
-        pstats = StatsPreprocessor(allstats).process()
+        pstats = StatsPreprocessor(
+            RawStatsLoader(infolder, name).load()
+        ).process()
         pstats.save(prefix)
 
         # process and save lambda stats per weight
