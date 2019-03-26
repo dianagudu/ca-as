@@ -5,6 +5,7 @@ from .helper import Heuristic_Algorithm_Names
 from .plotter import Plotter
 
 class Breakdown():
+
     def __init__(self, data, weights, algos, name):
         self.__data = data
         self.__weights = weights
@@ -43,6 +44,7 @@ class Breakdown():
 
 
 class Postprocessor():
+
     def __init__(self, dataset):
         self.__dataset = dataset
 

@@ -10,6 +10,7 @@ from .helper import Stochastic_Algorithm_Names
 
 
 class RawStatsLoader():
+
     __schema = {'instance': np.object_,
                 'algorithm': np.object_,
                 'time': np.float64,

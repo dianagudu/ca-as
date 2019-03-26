@@ -107,7 +107,8 @@ class RawStatsRandom(RawStats):
         welfares = self.get_welfares()
         # normalize welfare by average value on each instance
         welfares_means = pd.DataFrame(
-            welfares.groupby(['instance', 'algorithm']).welfare.mean().reset_index(name='mean_welfare'))
+            welfares.groupby(['instance', 'algorithm'])
+                    .welfare.mean().reset_index(name='mean_welfare'))
         welfares = welfares.merge(welfares_means)
         welfares.eval(
             'welfare = (welfare / mean_welfare - 1.) * 100.', inplace=True)
@@ -121,9 +122,10 @@ class RawStatsRandom(RawStats):
         for algo in self.algos:
             data.append(welfares[welfares.algorithm == algo].welfare.values)
             print(
-                "[" + algo + "]", "min =", welfares[
-                    welfares.algorithm == algo].welfare.min(),
-                ", max =", welfares[welfares.algorithm == algo].welfare.max())
+                "[" + algo + "]", "min =",
+                welfares[welfares.algorithm == algo].welfare.min(),
+                ", max =",
+                welfares[welfares.algorithm == algo].welfare.max())
         Plotter.boxplot_random(data, self.algos, outfile)
 
 
@@ -164,25 +166,35 @@ class ProcessedStats():
     @staticmethod
     def load(filename):
         with open(filename, "r") as f:
-            dobj = yaml.load(f)
+            dobj = yaml.load(f, Loader=yaml.BaseLoader)
         return ProcessedStats.from_dict(dobj)
 
-    def save(self, filename):
-        with open(filename, "w") as f:
-            yaml.dump(self.to_dict(), f)
+    def save(self, prefix):
+        info = self.to_dict(prefix)
+        with open(prefix + "_pstats.yaml", "w") as f:
+            yaml.dump(info, f)
+        self.welfares.to_csv(info["welfares"], float_format='%g')
+        self.times.to_csv(info["times"], float_format='%g')
+        self.costw.to_csv(info["costw"], float_format='%g')
+        self.costt.to_csv(info["costt"], float_format='%g')
 
     @staticmethod
     def from_dict(dobj):
-        return ProcessedStats(**dobj)
+        welfares = pd.read_csv(dobj["welfares"], index_col='instance')
+        times = pd.read_csv(dobj["times"], index_col='instance')
+        costw = pd.read_csv(dobj["costw"], index_col='instance')
+        costt = pd.read_csv(dobj["costt"], index_col='instance')
+        return ProcessedStats(dobj["name"], dobj["algos"],
+                              welfares, times, costw, costt)
 
-    def to_dict(self):
+    def to_dict(self, prefix):
         return {
             "name": self.name,
             "algos": self.algos,
-            "welfares": self.welfares,
-            "times": self.times,
-            "costw": self.costw,
-            "costt": self.costt
+            "welfares": prefix + ".welfares",
+            "times": prefix + ".times",
+            "costw": prefix + ".costw",
+            "costt": prefix + ".costt"
         }
 
 
@@ -205,9 +217,8 @@ class LambdaStats():
     def winners(self):
         return self.__winners
 
-    # todo: fix this!
     def get_breakdown(self, algos):
-        elements, counts = np.unique(self.winners, return_counts=True)
+        elements, counts = np.unique(self.winners.winner, return_counts=True)
 
         # create column for weight and add to matrix
         column = [counts[np.where(elements == algo)[0]]
@@ -218,27 +229,18 @@ class LambdaStats():
         return column
 
     @staticmethod
-    def load(filename):
-        with open(filename, "r") as f:
-            dobj = yaml.load(f)
-        return LambdaStats.from_dict(dobj)
+    def load(filename, weight):
+        costs = pd.read_csv(filename + ".costs", index_col='instance')
+        winners = pd.read_csv(filename + ".winners", index_col='instance')
+        return LambdaStats(weight, costs, winners)
 
     def save(self, filename):
-        with open(filename, "w") as f:
-            yaml.dump(self.to_dict(), f)
+        self.costs.to_csv(filename + ".costs", float_format='%g')
+        self.winners.to_csv(filename + ".winners", float_format='%g')
 
-    @staticmethod
-    def from_dict(dobj):
-        return LambdaStats(**dobj)
-
-    def to_dict(self):
-        return {
-            "weight": self.weight,
-            "costs": self.costs,
-            "winners": self.winners
-        }
 
 class ProcessedDataset():
+
     def __init__(self, pstats, weights, lstats):
         self.__pstats = pstats
         self.__weights = weights
@@ -267,14 +269,16 @@ class ProcessedDataset():
     @staticmethod
     def load(metafile):
         with open(metafile, "r") as f:
-            dobj = yaml.load(f)
+            dobj = yaml.load(f, Loader=yaml.BaseLoader)
         return ProcessedDataset.from_dict(dobj)
 
     @staticmethod
     def from_dict(dobj):
         pstats = ProcessedStats.load(dobj["pstats_file"])
-        weights = np.array(dobj["weights"])
+        weights = np.array(dobj["weights"], dtype='float64')
+        lstats_file_prefix = dobj["lstats_file_prefix"]
         lstats = {}
-        for weight in weights.tolist():
-            lstats[weight] = LambdaStats.load(dobj["lstats_files"][weight])
+        for weight in weights:
+            lstats[weight] = LambdaStats.load(
+                lstats_file_prefix + str(weight), weight)
         return ProcessedDataset(pstats, weights, lstats)

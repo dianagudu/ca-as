@@ -26,7 +26,7 @@ class Plotter():
                               )
         snsplot.set_xticklabels(breakdown.weights, rotation=0, fontsize=18)
         snsplot.set_yticklabels(
-            breakdown.algos[::-1], rotation=0, fontsize=18)
+            breakdown.algos, rotation=0, fontsize=18)
         snsplot.set_xlabel("$\lambda$", fontsize=18)
         # increase fontsize for colorbar
         ax.collections[0].colorbar.ax.tick_params(labelsize=16)

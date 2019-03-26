@@ -9,6 +9,7 @@ from .stats import LambdaStats
 from .loader import RawStatsLoader
 
 class StatsPreprocessor():
+
     def __init__(self, rawstats):
         self.__rawstats = rawstats
 
@@ -70,6 +71,7 @@ class StatsPreprocessor():
 
 
 class LambdaStatsPreprocessor():
+
     def __init__(self, pstats):
         self.__pstats = pstats
 
@@ -80,40 +82,39 @@ class LambdaStatsPreprocessor():
     def process(self, weight):
         costs = ((weight * self.pstats.costw) ** 2 +
                 ((1 - weight) * self.pstats.costt) ** 2) ** 0.5
-        winners = costs.idxmin(axis=1)
+        winners = costs.idxmin(axis=1).to_frame().rename(columns={0: 'winner'})
         return LambdaStats(weight, costs, winners)
 
 
 class DatasetCreator():
+
     @staticmethod
     def create(weights, infolder, outfolder, name):
         # filenames
-        pstats_file = outfolder + "/" + name + "_pstats.yaml"
-        lstats_files = {}
-        for weight in weights.tolist():
-            lstats_files[weight] = outfolder + "/" + name + "_lstats_" + str(weight) + ".yaml"
-        metafile = outfolder + "/" + name + "_meta.yaml"
+        prefix = outfolder + "/" + name
+        pstats_file = prefix + "_pstats.yaml"
+        lstats_file_prefix = prefix + "_lstats_"
+        metafile = prefix + ".yaml"
 
         # load raw stats
-        rsl = RawStatsLoader(infolder, name)
-        allstats = rsl.load()
+        allstats = RawStatsLoader(infolder, name).load()
 
         # process and save raw stats
         pstats = StatsPreprocessor(allstats).process()
-        pstats.save(pstats_file)
+        pstats.save(prefix)
 
         # process and save lambda stats per weight
         ls_preproc = LambdaStatsPreprocessor(pstats)
         for weight in weights:
             lstats = ls_preproc.process(weight)
-            lstats.save(lstats_files[weight])
+            lstats.save(lstats_file_prefix + str(weight))
 
         # save dataset metafile
         dobj = {
             "pstats_file": pstats_file,
             "weights": weights.tolist(),
-            "lstats_files": lstats_files
+            "lstats_file_prefix": lstats_file_prefix
         }
 
         with open(metafile, "w") as f:
-            yaml.dump(dobj, f, default_flow_style=False)
+            yaml.dump(dobj, f)
