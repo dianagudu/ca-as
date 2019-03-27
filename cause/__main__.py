@@ -2,22 +2,29 @@ import numpy as np
 
 from cause.stats import ProcessedDataset
 from cause.stats import ProcessedStats
+
 from cause.preprocessor import RawStatsLoader
 from cause.preprocessor import DatasetCreator
 from cause.preprocessor import StatsPreprocessor
 from cause.preprocessor import FeatureExtractor
+from cause.preprocessor import LambdaStats
+
 from cause.postprocessor import Postprocessor
 from cause.plotter import Plotter
 from cause.features import Features
 
-name = "ca-compare-3dims"
-#name = "malaise"
+from cause.predictor import MalaisePredictor
 
-infolder = "/tmp/stats"   # testing!
-#infolder = "/home/diana/ca/stats/" + name
-instance_folder = "/tmp/datasets"
+#name = "ca-compare-3dims"
+name = "malaise"
 
-outfolder = "/tmp/" + name
+#infolder = "/tmp/stats"   # testing!
+#instance_folder = "/tmp/datasets"   # testing!
+#outfolder = "/tmp/" + name   # testing!
+
+infolder = "/home/diana/ca/stats/" + name
+instance_folder = "/home/diana/ca/datasets/" + name
+outfolder = "/home/diana/ca/processed/" + name
 
 # 1st workflow: load stats for alg comparison (incl optimal) and plot avg case
 #rsl = RawStatsLoader(infolder, name)
@@ -27,14 +34,14 @@ outfolder = "/tmp/" + name
 
 # 3rd workflow: preprocess dataset (stats for heuristic algos and features)
 #               run prediction using ML, plot and save results
-#weights = np.array([0., .1, .2, .3, .4, .5, .6, .7, .8, .9, 1.])
-#DatasetCreator.create(weights, infolder, outfolder, name)
+weights = np.array([0., .1, .2, .3, .4, .5, .6, .7, .8, .9, 1.])
+DatasetCreator.create(weights, infolder, outfolder, name)
 
 # extract features
 feats = FeatureExtractor.extract(instance_folder, name)
 feats.save(outfolder)
 
-feats = Features.load(outfolder + "/" + name + "_features.yaml")
+#feats = Features.load(outfolder + "/" + name + "_features.yaml")
 
 
 # load processed dataset
@@ -48,3 +55,7 @@ feats = Features.load(outfolder + "/" + name + "_features.yaml")
 #breakdown.save_to_latex(outfolder)
 # plot breakdown as heatmap
 #breakdown.plot(outfolder)
+
+weight = 0.5
+lstats = LambdaStats.load(outfolder + "/" + name + "_lstats_" + str(weight), weight)
+MalaisePredictor(lstats, feats).predict()
