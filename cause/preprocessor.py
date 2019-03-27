@@ -2,30 +2,95 @@ import numpy as np
 import pandas as pd
 import glob
 import yaml
+import math
+import scipy.stats.stats as st
 
-from .stats import RawStatsOptimal
-from .stats import ProcessedStats
-from .stats import LambdaStats
-from .loader import RawStatsLoader
+from cause.helper import Heuristic_Algorithm_Names
+from cause.helper import Stochastic_Algorithm_Names
+from cause.helper import Feature_Names
+
+from cause.stats import RawStats
+from cause.stats import RawStatsOptimal
+from cause.stats import RawStatsRandom
+from cause.stats import ProcessedStats
+from cause.stats import LambdaStats
+
+from cause.features import Features
+
+from cage.auctionset import AuctionSet
+
+class RawStatsLoader():
+
+    __schema = {'instance': np.object_,
+                'algorithm': np.object_,
+                'time': np.float64,
+                'welfare': np.float64,
+                'ngoods': np.int64,
+                'nwin': np.int64,
+                'util_mean': np.float64,
+                'util_stddev': np.float64,
+                'price_mean': np.float64}
+
+    def __init__(self, infolder, name):
+        self.__infolder = infolder
+        self.__name = name
+
+    @property
+    def infolder(self):
+        return self.__infolder
+
+    @property
+    def schema(self):
+        return self.__schema
+
+    @property
+    def name(self):
+        return self.__name
+
+    def load(self):
+        allstats = self.__load()
+        # average over multiple runs when needed
+        allstats = allstats.groupby(
+            ['instance', 'algorithm']).mean().reset_index()
+        # filter out non heuristic algos
+        allstats = allstats[allstats.algorithm.isin(
+                [x.name for x in Heuristic_Algorithm_Names])]
+        return RawStats(self.name, allstats, [x.name for x in Heuristic_Algorithm_Names])
+
+    def load_optimal(self):
+        optstats = self.__load()
+        # average over multiple runs when needed
+        optstats = optstats.groupby(
+            ['instance', 'algorithm']).mean().reset_index()
+        return RawStatsOptimal(self.name, optstats)
+
+    def load_random(self):
+        randstats = self.__load()
+        # filter out non-stochastic algos
+        randstats = randstats[randstats.algorithm.isin(
+                [x.name for x in Stochastic_Algorithm_Names])]
+        return RawStatsRandom(self.name, randstats)
+
+    def __load(self):
+        allstats = pd.DataFrame()
+        for stats_file in sorted(glob.glob(self.infolder + "/*")):
+            stats = pd.read_csv(stats_file, header=None,
+                                names=self.schema.keys(), dtype=self.schema)
+            allstats = allstats.append(stats, ignore_index=True)
+        return allstats
 
 
 class StatsPreprocessor():
 
-    def __init__(self, rawstats):
-        self.__rawstats = rawstats
-
-    @property
-    def rawstats(self):
-        return self.__rawstats
-
-    def process(self):
-        if isinstance(self.rawstats.df, RawStatsOptimal):
+    @staticmethod
+    def process(rawstats):
+        if isinstance(rawstats.df, RawStatsOptimal):
             pstats = pd.DataFrame(
-                self.rawstats.df.groupby('instance')
+                rawstats.df.groupby('instance')
                 .apply(StatsPreprocessor.__compute_costs_optimal))
         else:
             pstats = pd.DataFrame(
-                self.rawstats.df.groupby('instance')
+                rawstats.df.groupby('instance')
                 .apply(StatsPreprocessor.__compute_costs))
 
         costt = pstats.pivot(
@@ -33,12 +98,12 @@ class StatsPreprocessor():
         costw = pstats.pivot(
             index='instance', columns='algorithm', values='costw')
 
-        return ProcessedStats(self.rawstats.name,
-                              self.rawstats.algos,
-                              self.rawstats.get_welfares(),
-                              self.rawstats.get_times(),
-                              costw[self.rawstats.algos],
-                              costt[self.rawstats.algos])  # reorder columns by algo
+        return ProcessedStats(rawstats.name,
+                              rawstats.algos,
+                              rawstats.get_welfares(),
+                              rawstats.get_times(),
+                              costw[rawstats.algos],
+                              costt[rawstats.algos])  # reorder columns by algo
 
     @staticmethod
     def __compute_costs(data):
@@ -99,9 +164,8 @@ class DatasetCreator():
 
         # load raw stats
         # process and save raw stats
-        pstats = StatsPreprocessor(
-            RawStatsLoader(infolder, name).load()
-        ).process()
+        pstats = StatsPreprocessor.process(
+            RawStatsLoader(infolder, name).load())
         pstats.save(prefix)
 
         # process and save lambda stats per weight
@@ -119,3 +183,158 @@ class DatasetCreator():
 
         with open(metafile, "w") as f:
             yaml.dump(dobj, f)
+
+
+class FeatureExtractor():
+
+    @staticmethod
+    def extract(infolder, name):
+        features = pd.DataFrame()
+        for instance_file in sorted(glob.glob(infolder + "/*")):
+            fpi = FeatureExtractor.extract_from_instance(instance_file)
+            features = features.append(fpi)
+        return Features(infolder, name, features)
+
+
+    @staticmethod
+    def extract_from_instance(filename):
+        aset = AuctionSet.load(filename)
+
+        # shorthand variables:
+        b = aset.bid_set.values
+        r = aset.bid_set.quantities
+        a = aset.ask_set.values
+        s = aset.ask_set.quantities
+
+        ### stats for average bid prices
+        nobs, b_minmax, b_mean, b_var, b_skew, b_kurt = st.describe(b/np.sum(r, axis=1), ddof=0)
+        ### stats for average ask prices
+        nobs, a_minmax, a_mean, a_var, a_skew, a_kurt = st.describe(a/np.sum(s, axis=1), ddof=0)
+        ### stats for bid bundle size
+        nobs, r_minmax, r_mean, r_var, r_skew, r_kurt = st.describe(np.sum(r, axis=1), ddof=0)
+        ### stats for ask bundle size
+        nobs, s_minmax, s_mean, s_var, s_skew, s_kurt = st.describe(np.sum(s, axis=1), ddof=0)
+        ####### heterogeneity -> resource type axis (stats inside a bundle)
+        # stats for resource quantities demanded for each resource type: sum, mean, min, max per res type, then describe
+        nobs, rt_sum_minmax, rt_sum_mean, rt_sum_var, rt_sum_skew, rt_sum_kurt = st.describe(np.sum(r, axis=0), ddof=0)
+        nobs, rt_mean_minmax, rt_mean_mean, rt_mean_var, rt_mean_skew, rt_mean_kurt = st.describe(np.mean(r, axis=0), ddof=0)
+        nobs, rt_min_minmax, rt_min_mean, rt_min_var, rt_min_skew, rt_min_kurt = st.describe(np.min(r, axis=0), ddof=0)
+        nobs, rt_max_minmax, rt_max_mean, rt_max_var, rt_max_skew, rt_max_kurt = st.describe(np.max(r, axis=0), ddof=0)
+        # stats for resource quantities offered for each resource type
+        nobs, st_sum_minmax, st_sum_mean, st_sum_var, st_sum_skew, st_sum_kurt = st.describe(np.sum(s, axis=0), ddof=0)
+        nobs, st_mean_minmax, st_mean_mean, st_mean_var, st_mean_skew, st_mean_kurt = st.describe(np.mean(s, axis=0), ddof=0)
+        nobs, st_min_minmax, st_min_mean, st_min_var, st_min_skew, st_min_kurt = st.describe(np.min(s, axis=0), ddof=0)
+        nobs, st_max_minmax, st_max_mean, st_max_var, st_max_skew, st_max_kurt = st.describe(np.max(s, axis=0), ddof=0)
+        # stats for demand/supply ratio by resource types: total, mean
+        nobs, qratio_sum_minmax, qratio_sum_mean, qratio_sum_var, qratio_sum_skew, qratio_sum_kurt = st.describe(np.sum(r, axis=0)/np.sum(s, axis=0), ddof=0)
+        nobs, qratio_mean_minmax, qratio_mean_mean, qratio_mean_var, qratio_mean_skew, qratio_mean_kurt = st.describe(np.mean(r, axis=0)/np.mean(s, axis=0), ddof=0)
+        # stats for surplus quantity by resource types
+        nobs, qsurplus_sum_minmax, qsurplus_sum_mean, qsurplus_sum_var, qsurplus_sum_skew, qsurplus_sum_kurt = st.describe(np.sum(s, axis=0) - np.sum(r, axis=0), ddof=0)
+        # quantity spread by resource type (max requested quantity of resource k - min offered quantity of resource k)
+        nobs, qspread_minmax, qspread_mean, qspread_var, qspread_skew, qspread_kurt = st.describe(np.max(r, axis=0) - np.min(s, axis=0), ddof=0)
+        # mid price
+        bid_max = (b / r.sum(axis=1)).max()
+        ask_min = (a / s.sum(axis=1)).min()
+        mid_price = (bid_max + ask_min) / 2
+        # bid-ask spread
+        ba_spread = bid_max - ask_min
+        # total demand quantity
+        r_total = r.sum()
+        # total supply quantity
+        s_total = s.sum()
+        # total demand value
+        b_total = b.sum()
+        # total supply value
+        a_total = a.sum()
+        # surplus value per surplus unit
+        surplus_value_per_surplus_unit = 0 if r_total == s_total else (b_total - a_total) / (r_total - s_total)
+        ### append features
+        features = np.array([
+                ## instance name to be used as index
+                  filename
+                ### group 1: instance - price related
+                , b_mean                 # average_bid_price_mean
+                , math.sqrt(b_var)       # average_bid_price_stddev
+                , b_skew                 # average_bid_price_skewness
+                , b_kurt                 # average_bid_price_kurtosis
+                , a_mean                 # average_ask_price_mean
+                , math.sqrt(a_var)       # average_ask_price_stddev
+                , a_skew                 # average_ask_price_skewness
+                , a_kurt                 # average_ask_price_kurtosis
+                , bid_max                # average_bid_price_max
+                , ask_min                # average_ask_price_min
+                , mid_price              # mid_price
+                , ba_spread              # bid_ask_spread
+                , ba_spread / mid_price  # bid_ask_spread_over_mid_price
+                ### group 2: instance - quantity related
+                , r_mean                 # bid_bundle_size_mean
+                , math.sqrt(r_var)       # bid_bundle_size_stddev
+                , r_skew                 # bid_bundle_size_skewness
+                , r_kurt                 # bid_bundle_size_kurtosis
+                , s_mean                 # ask_bundle_size_mean
+                , math.sqrt(s_var)       # ask_bundle_size_stddev
+                , s_skew                 # ask_bundle_size_skewness
+                , s_kurt                 # ask_bundle_size_kurtosis
+                ### group 3: instance - quantity per resource related (measure of heterogeneity)
+                # --> demand side
+                , rt_sum_mean            # total_demand_per_resource_mean
+                , math.sqrt(rt_sum_var)  # total_demand_per_resource_stddev
+                , rt_sum_skew            # total_demand_per_resource_skewness
+                , rt_sum_kurt            # total_demand_per_resource_kurtosis
+                , rt_mean_mean           # average_demand_per_resource_mean
+                , math.sqrt(rt_mean_var) # average_demand_per_resource_stddev
+                , rt_mean_skew           # average_demand_per_resource_skewness
+                , rt_mean_kurt           # average_demand_per_resource_kurtosis
+                , rt_min_mean            # minimum_demand_per_resource_mean
+                , math.sqrt(rt_min_var)  # minimum_demand_per_resource_stddev
+                , rt_min_skew            # minimum_demand_per_resource_skewness
+                , rt_min_kurt            # minimum_demand_per_resource_kurtosis
+                , rt_max_mean            # maximum_demand_per_resource_mean
+                , math.sqrt(rt_max_var)  # maximum_demand_per_resource_stddev
+                , rt_max_skew            # maximum_demand_per_resource_skewness
+                , rt_max_kurt            # maximum_demand_per_resource_kurtosis
+                # --> supply side
+                , st_sum_mean            # total_supply_per_resource_mean
+                , math.sqrt(st_sum_var)  # total_supply_per_resource_stddev
+                , st_sum_skew            # total_supply_per_resource_skewness
+                , st_sum_kurt            # total_supply_per_resource_kurtosis
+                , st_mean_mean           # average_supply_per_resource_mean
+                , math.sqrt(st_mean_var) # average_supply_per_resource_stddev
+                , st_mean_skew           # average_supply_per_resource_skewness
+                , st_mean_kurt           # average_supply_per_resource_kurtosis
+                , st_min_mean            # minimum_supply_per_resource_mean
+                , math.sqrt(st_min_var)  # minimum_supply_per_resource_stddev
+                , st_min_skew            # minimum_supply_per_resource_skewness
+                , st_min_kurt            # minimum_supply_per_resource_kurtosis
+                , st_max_mean            # maximum_supply_per_resource_mean
+                , math.sqrt(st_max_var)  # maximum_supply_per_resource_stddev
+                , st_max_skew            # maximum_supply_per_resource_skewness
+                , st_max_kurt            # maximum_supply_per_resource_kurtosis
+                ### group 4: instance - demand-supply balance related
+                , surplus_value_per_surplus_unit      # surplus_value_per_surplus_unit
+                , b_total / a_total                   # demand_supply_ratio_value
+                , r_total / s_total                   # demand_supply_ratio_quantity
+                , qratio_sum_mean                     # demand_supply_ratio_total_quantity_per_resource_mean
+                , math.sqrt(qratio_sum_var)           # demand_supply_ratio_total_quantity_per_resource_stddev
+                , qratio_sum_skew                     # demand_supply_ratio_total_quantity_per_resource_skewness
+                , qratio_sum_kurt                     # demand_supply_ratio_total_quantity_per_resource_kurtosis
+                , qratio_mean_mean                    # demand_supply_ratio_mean_quantity_per_resource_mean
+                , math.sqrt(qratio_mean_var)          # demand_supply_ratio_mean_quantity_per_resource_stddev
+                , qratio_mean_skew                    # demand_supply_ratio_mean_quantity_per_resource_skewness
+                , qratio_mean_kurt                    # demand_supply_ratio_mean_quantity_per_resource_kurtosis
+                , s_total - r_total                   # surplus_quantity
+                , qsurplus_sum_mean                   # surplus_total_quantity_per_resource_mean
+                , math.sqrt(qsurplus_sum_var)         # surplus_total_quantity_per_resource_stddev
+                , qsurplus_sum_skew                   # surplus_total_quantity_per_resource_skewness
+                , qsurplus_sum_kurt                   # surplus_total_quantity_per_resource_kurtosis
+                , qspread_mean                        # quantity_spread_per_resource_mean
+                , math.sqrt(qspread_var)              # quantity_spread_per_resource_stddev
+                , qspread_skew                        # quantity_spread_per_resource_skewness
+                , qspread_kurt                        # quantity_spread_per_resource_kurtosis
+                , b_mean / a_mean                     # ratio_average_price_bid_to_ask
+                , r_mean / s_mean                     # ratio_bundle_size_bid_to_ask
+            ])
+
+        fpi = pd.DataFrame(features.reshape((1, features.shape[0])),
+            columns=['instance', *[x.name for x in Feature_Names]])
+        return fpi.set_index('instance')

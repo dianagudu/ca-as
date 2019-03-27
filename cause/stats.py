@@ -2,9 +2,9 @@ import numpy as np
 import pandas as pd
 import yaml
 
-from .helper import Algorithm_Names
-from .helper import Stochastic_Algorithm_Names
-from .plotter import Plotter
+from cause.helper import Algorithm_Names
+from cause.helper import Stochastic_Algorithm_Names
+from cause.plotter import Plotter
 
 
 class RawStats():
