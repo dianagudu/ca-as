@@ -55,7 +55,7 @@ class ClassificationSet():
 
     @property
     def y_pred(self):
-        return self.__y_pred
+        return self.__y_pred   # todo: dict of predictions for each cls used?
 
     def predict(self, cls):
         self.__y_pred = cls.predict(self.X)
@@ -65,6 +65,22 @@ class ClassificationSet():
 
     def mre(self):
         return ((self.c[self.y_pred] - self.c[self.y]) ** 2).mean()
+
+
+class RandomClassifier():
+
+    def __init__(self, labels):
+        self.__labels = labels
+        # todo: init random state
+        # np.random.seed(xx)
+
+    @property
+    def labels(self):
+        return self.__labels
+
+    def predict(self, X):
+        # use shape of X to return an array
+        return np.random.choice(self.labels, X.shape[0])
 
 
 class MalaisePredictor(Predictor):
@@ -83,20 +99,33 @@ class MalaisePredictor(Predictor):
             self.features, self.lstats.winners, self.lstats.costs)
         train, test = Predictor.__preprocess_and_split(set)
 
-        # train classifier on training set
-        cls = autosklearn.classification.AutoSklearnClassifier()
-        cls.fit(train.X, train.y)
-        # print models
-        cls.show_models()
-        # dump model to file
-        #with open(pickled_model, 'wb') as fio:
-        #    pickle.dump(cls, fio)
+        if False:
+            # train classifier on training set
+            cls = autosklearn.classification.AutoSklearnClassifier()
+            cls.fit(train.X, train.y)
+            # print models
+            cls.show_models()
+            # dump model to file
+            #with open(pickled_model, 'wb') as fio:
+            #    pickle.dump(cls, fio)
 
-        # predict winners using trained model for training and test sets
-        train.predict(cls)
-        test.predict(cls)
+            # predict winners using trained model for training and test sets
+            train.predict(cls)
+            test.predict(cls)
+
+            print("acc [train]", train.accuracy())
+            print("acc [test]", test.accuracy())
+            print("mre [train]", train.mre())
+            print("mre [test]", test.mre())
+
+        # random prediction
+        rcls = RandomClassifier(self.lstats.costs.columns.values)
+        train.predict(rcls)
+        test.predict(rcls)
 
         print("acc [train]", train.accuracy())
         print("acc [test]", test.accuracy())
         print("mre [train]", train.mre())
         print("mre [test]", test.mre())
+
+
