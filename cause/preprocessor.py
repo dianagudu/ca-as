@@ -188,17 +188,25 @@ class DatasetCreator():
 class FeatureExtractor():
 
     @staticmethod
-    def extract(infolder, name):
-        features = pd.DataFrame()
-        for instance_file in sorted(glob.glob(infolder + "/*")):
-            fpi = FeatureExtractor.extract_from_instance(instance_file)
-            features = features.append(fpi)
-        return Features(infolder, name, features)
+    def extract(infolder, name, outfolder):
+        info = {
+            "infolder": infolder,
+            "name": name,
+            "features": outfolder + "/" + name + ".features"
+        }
+        with open(outfolder + "/" + name + "_features.yaml", "w") as f:
+            yaml.dump(info, f)
 
+        # write header to file
+        header = pd.DataFrame(columns = ["instance", *[x.name for x in Feature_Names]])
+        header.set_index('instance').to_csv(info["features"])
+        # append features of each instance to file
+        for instance_file in sorted(glob.glob(infolder + "/*")):
+            FeatureExtractor.extract_from_instance(instance_file, info["features"])
 
     @staticmethod
-    def extract_from_instance(filename):
-        aset = AuctionSet.load(filename)
+    def extract_from_instance(instance_file, features_file):
+        aset = AuctionSet.load(instance_file)
 
         # shorthand variables:
         b = aset.bid_set.values
@@ -251,7 +259,7 @@ class FeatureExtractor():
         ### append features
         features = np.array([
                 ## instance name to be used as index
-                  filename
+                  instance_file
                 ### group 1: instance - price related
                 , b_mean                 # average_bid_price_mean
                 , math.sqrt(b_var)       # average_bid_price_stddev
@@ -335,6 +343,11 @@ class FeatureExtractor():
                 , r_mean / s_mean                     # ratio_bundle_size_bid_to_ask
             ])
 
+
         fpi = pd.DataFrame(features.reshape((1, features.shape[0])),
-            columns=['instance', *[x.name for x in Feature_Names]])
-        return fpi.set_index('instance')
+            columns = ["instance", *[x.name for x in Feature_Names]])
+        fpi.set_index('instance')
+
+        with open(features_file, "a") as f:
+            fpi.to_csv(f, header=False, float_format='%g')
+            f.close()
