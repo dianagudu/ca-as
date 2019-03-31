@@ -18,13 +18,13 @@ from cause.predictor import MalaisePredictor
 #name = "ca-compare-3dims"
 name = "malaise"
 
-#infolder = "/tmp/stats"   # testing!
-#instance_folder = "/tmp/datasets"   # testing!
-#outfolder = "/tmp/" + name   # testing!
+infolder = "/tmp/stats"   # testing!
+instance_folder = "/tmp/instances"   # testing!
+outfolder = "/tmp/out"   # testing!
 
-infolder = "/home/diana/ca/stats/" + name
-instance_folder = "/home/diana/ca/datasets/" + name
-outfolder = "/home/diana/ca/processed/" + name
+#infolder = "/home/diana/ca/stats/" + name
+#instance_folder = "/home/diana/ca/datasets/" + name
+#outfolder = "/home/diana/ca/processed/" + name
 
 # 1st workflow: load stats for alg comparison (incl optimal) and plot avg case
 #rsl = RawStatsLoader(infolder, name)
@@ -34,14 +34,14 @@ outfolder = "/home/diana/ca/processed/" + name
 
 # 3rd workflow: preprocess dataset (stats for heuristic algos and features)
 #               run prediction using ML, plot and save results
-weights = np.array([0., .1, .2, .3, .4, .5, .6, .7, .8, .9, 1.])
-DatasetCreator.create(weights, infolder, outfolder, name)
+#weights = np.array([0., .1, .2, .3, .4, .5, .6, .7, .8, .9, 1.])
+weights = np.array([0., .5, 1.]) # testing!
+#DatasetCreator.create(weights, infolder, outfolder, name)
 
 # extract features
-feats = FeatureExtractor.extract(instance_folder, name)
-feats.save(outfolder)
+FeatureExtractor.extract(instance_folder, name, outfolder)
 
-#feats = Features.load(outfolder + "/" + name + "_features.yaml")
+feats = Features.load(outfolder + "/" + name + "_features.yaml")
 
 
 # load processed dataset
