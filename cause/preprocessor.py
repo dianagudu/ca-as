@@ -188,7 +188,8 @@ class DatasetCreator():
 class FeatureExtractor():
 
     @staticmethod
-    def extract(infolder, name, outfolder, in_parallel=False, num_threads=2):
+    def extract(infolder, name, outfolder,
+                in_parallel=False, num_threads=2, task_queue_file=None):
         info = {
             "infolder": infolder,
             "name": name,
@@ -209,8 +210,13 @@ class FeatureExtractor():
             import threading, queue
             # create task queue
             my_queue = queue.Queue()
-            for instance_file in sorted(glob.glob(infolder + "/*")):
-                my_queue.put(instance_file)
+            if task_queue_file:
+                with open(task_queue_file, "r") as f:
+                    for instance_file in f.read().splitlines():
+                        my_queue.put(instance_file)
+            else:
+                for instance_file in sorted(glob.glob(infolder + "/*")):
+                    my_queue.put(instance_file)
             # create threads and start processing
             for tid in range(num_threads):
                 aThread = threading.Thread(target=FeatureExtractor.__do_work,

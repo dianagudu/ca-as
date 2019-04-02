@@ -39,7 +39,9 @@ outfolder = "/home/diana/ca/processed/" + name
 #DatasetCreator.create(weights, infolder, outfolder, name)
 
 # extract features
-FeatureExtractor.extract(instance_folder, name, outfolder, in_parallel=True, num_threads=13)
+FeatureExtractor.extract(instance_folder, name, outfolder,
+                         in_parallel=True, num_threads=2,
+                         task_queue_file=outfolder + "/features_task_queue")
 
 #feats = Features.load(outfolder + "/" + name + "_features.yaml")
 
