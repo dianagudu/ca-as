@@ -188,7 +188,7 @@ class DatasetCreator():
 class FeatureExtractor():
 
     @staticmethod
-    def extract(infolder, name, outfolder):
+    def extract(infolder, name, outfolder, in_parallel=False, num_threads=2):
         info = {
             "infolder": infolder,
             "name": name,
@@ -200,9 +200,39 @@ class FeatureExtractor():
         # write header to file
         header = pd.DataFrame(columns = ["instance", *[x.name for x in Feature_Names]])
         header.set_index('instance').to_csv(info["features"])
-        # append features of each instance to file
-        for instance_file in sorted(glob.glob(infolder + "/*")):
-            FeatureExtractor.extract_from_instance(instance_file, info["features"])
+
+        if not in_parallel:
+            # append features of each instance to file
+            for instance_file in sorted(glob.glob(infolder + "/*")):
+                FeatureExtractor.extract_from_instance(instance_file, info["features"])
+        else:
+            import threading, queue
+            # create task queue
+            my_queue = queue.Queue()
+            for instance_file in sorted(glob.glob(infolder + "/*")):
+                my_queue.put(instance_file)
+            # create threads and start processing
+            for tid in range(num_threads):
+                aThread = threading.Thread(target=FeatureExtractor.__do_work,
+                                           args=(my_queue, info["features"], tid))
+                # daemon lets the program end once the tasks are done
+                aThread.daemon = True
+                aThread.start()
+
+            print("Starting")
+            # wait until all tasks are done
+            my_queue.join()
+            print("Done")
+
+    # a function to handle 1 task
+    @staticmethod
+    def __do_work(my_queue, output_file, thread_id):
+        # write to different output files
+        features_file = output_file + "." + str(thread_id)
+        while not my_queue.empty():
+            instance_file = my_queue.get()
+            FeatureExtractor.extract_from_instance(instance_file, features_file)
+            my_queue.task_done()
 
     @staticmethod
     def extract_from_instance(instance_file, features_file):
@@ -345,8 +375,7 @@ class FeatureExtractor():
 
 
         fpi = pd.DataFrame(features.reshape((1, features.shape[0])),
-            columns = ["instance", *[x.name for x in Feature_Names]])
-        fpi.set_index('instance')
+            columns = ["instance", *[x.name for x in Feature_Names]]).set_index('instance')
 
         with open(features_file, "a") as f:
             fpi.to_csv(f, header=False, float_format='%g')

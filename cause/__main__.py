@@ -18,13 +18,13 @@ from cause.predictor import MalaisePredictor
 #name = "ca-compare-3dims"
 name = "malaise"
 
-infolder = "/tmp/stats"   # testing!
-instance_folder = "/tmp/instances"   # testing!
-outfolder = "/tmp/out"   # testing!
+#infolder = "/tmp/stats"   # testing!
+#instance_folder = "/tmp/instances"   # testing!
+#outfolder = "/tmp/out"   # testing!
 
-#infolder = "/home/diana/ca/stats/" + name
-#instance_folder = "/home/diana/ca/datasets/" + name
-#outfolder = "/home/diana/ca/processed/" + name
+infolder = "/home/diana/ca/stats/" + name
+instance_folder = "/home/diana/ca/datasets/" + name
+outfolder = "/home/diana/ca/processed/" + name
 
 # 1st workflow: load stats for alg comparison (incl optimal) and plot avg case
 #rsl = RawStatsLoader(infolder, name)
@@ -35,13 +35,13 @@ outfolder = "/tmp/out"   # testing!
 # 3rd workflow: preprocess dataset (stats for heuristic algos and features)
 #               run prediction using ML, plot and save results
 #weights = np.array([0., .1, .2, .3, .4, .5, .6, .7, .8, .9, 1.])
-weights = np.array([0., .5, 1.]) # testing!
+#weights = np.array([0., .5, 1.]) # testing!
 #DatasetCreator.create(weights, infolder, outfolder, name)
 
 # extract features
-FeatureExtractor.extract(instance_folder, name, outfolder)
+FeatureExtractor.extract(instance_folder, name, outfolder, in_parallel=True, num_threads=13)
 
-feats = Features.load(outfolder + "/" + name + "_features.yaml")
+#feats = Features.load(outfolder + "/" + name + "_features.yaml")
 
 
 # load processed dataset
@@ -56,6 +56,6 @@ feats = Features.load(outfolder + "/" + name + "_features.yaml")
 # plot breakdown as heatmap
 #breakdown.plot(outfolder)
 
-weight = 0.5
-lstats = LambdaStats.load(outfolder + "/" + name + "_lstats_" + str(weight), weight)
-MalaisePredictor(lstats, feats).predict()
+#weight = 0.5
+#lstats = LambdaStats.load(outfolder + "/" + name + "_lstats_" + str(weight), weight)
+#MalaisePredictor(lstats, feats).predict()
