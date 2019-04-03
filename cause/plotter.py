@@ -18,9 +18,44 @@ class Plotter():
                       "size": fontsize})
 
     @staticmethod
+    def plot_feature_heatmap(features, outfolder="/tmp"):
+        Plotter.__set_rc_params(18)
+        f, ax = plt.subplots(figsize=(10, 8))
+        corr = features.features.corr()
+        snsplot = sns.heatmap(corr, mask=np.zeros_like(corr, dtype=np.bool),
+                              cmap=sns.diverging_palette(220, 10, as_cmap=True),
+                              square=True, ax=ax)
+        snsplot.set_xticklabels(snsplot.get_xticklabels(),
+                                rotation = 90, fontsize = 8)
+        snsplot.set_yticklabels(snsplot.get_yticklabels(),
+                                rotation = 0, fontsize = 8)
+        outfile = outfolder + "/feature_heatmap_" + features.name + ".png"
+        snsplot.get_figure().savefig(outfile, bbox_inches='tight', dpi=300)
+
+    @staticmethod
+    def plot_feature_importances(importances, outfolder="/tmp", N_cutoff=25):
+        Plotter.__set_rc_params(20)
+        # plot average importance
+        ind = np.arange(N_cutoff)  # the x locations for the groups
+        width = 0.4                # the width of the bars
+        _, ax = plt.subplots(figsize=(5, 10))
+        ax.barh(ind, importances.mean(axis=0)[0:N_cutoff], width, color='grey',\
+                xerr=importances.std(axis=0)[0:N_cutoff], error_kw={'linewidth': 0.8})
+        ax.set_xlabel('importance')#, fontsize=24)
+        ax.set_yticklabels(importances.columns[0:N_cutoff])#, rotation='vertical')
+        #ax.set_title('')
+        ax.set_yticks(ind)
+        ax.invert_yaxis()  # labels read top-to-bottom
+        # add line at 0.02 threshold
+        minor_ticks = np.array([0.02])
+        ax.set_xticks(minor_ticks, minor=True)
+        ax.grid(which='minor', color='r', zorder=1., linestyle='--')
+        plt.savefig(outfolder + "/feature_importances.png", bbox_inches='tight', dpi=300)
+
+    @staticmethod
     def plot_breakdown(breakdown, outfolder="/tmp"):
         Plotter.__set_rc_params(18)
-        f, ax = plt.subplots(figsize=(16, 9))
+        _, ax = plt.subplots(figsize=(16, 9))
         snsplot = sns.heatmap(breakdown.data, cmap=sns.cubehelix_palette(50, hue=0.05, rot=0, light=0.9, dark=0.2, as_cmap=True)  # , square=True
                               , ax=ax, annot=True, fmt="d", annot_kws={"fontsize": 16}, cbar=True
                               )
@@ -41,7 +76,7 @@ class Plotter():
         # reset seaborn settings
         sns.reset_orig()
         Plotter.__set_rc_params()
-        fig, ax1 = plt.subplots(figsize=(8, 5))
+        _, ax1 = plt.subplots(figsize=(8, 5))
         plt.subplots_adjust(left=0.075, right=0.95, top=0.9, bottom=0.25)
         bp = plt.boxplot(data, notch=1, vert=1, whis=[5, 95],
                          bootstrap=100, showmeans=True, showfliers=True)
@@ -107,7 +142,7 @@ class Plotter():
         # reset seaborn settings
         sns.reset_orig()
         Plotter.__set_rc_params()
-        fig, ax1 = plt.subplots(figsize=(8, 5))
+        _, ax1 = plt.subplots(figsize=(8, 5))
         plt.subplots_adjust(left=0.075, right=0.95, top=0.9, bottom=0.25)
         bp = plt.boxplot(data, notch=1, vert=False, whis=[5, 95],
                          bootstrap=10, showmeans=True, showfliers=True)

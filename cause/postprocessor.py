@@ -1,8 +1,12 @@
 import numpy as np
 import pandas as pd
 
+from sklearn.ensemble import ExtraTreesClassifier
+
 from cause.helper import Heuristic_Algorithm_Names
 from cause.plotter import Plotter
+from cause.predictor import ClassificationSet
+
 
 class Breakdown():
 
@@ -64,3 +68,44 @@ class Postprocessor():
 
         return Breakdown(breakdown, self.dataset.weights,
                          self.dataset.algos, self.dataset.name)
+
+
+class FeatsPostprocessor(Postprocessor):
+
+    def __init__(self, dataset, features):
+        super().__init__(dataset)
+        self.__features = features
+
+    @property
+    def features(self):
+        return self.__features
+
+    def save_feature_importances(self, outfolder):
+        # compute feature importances for each weight
+        importances = np.empty(shape=(0,0))
+        for weight in self.dataset.weights:
+            lstats = self.dataset.lstats[weight]
+            clsset = ClassificationSet(self.features.features, lstats.winners, lstats.costs)
+            clf = ExtraTreesClassifier()
+            clf = clf.fit(clsset.X, clsset.y)
+            if importances.shape[0] == 0:
+                importances = clf.feature_importances_
+            else:
+                importances = np.vstack([importances, clf.feature_importances_])
+        # sort feature names by average importance
+        sorted_feature_names = [name for _,name in 
+                                sorted(zip(importances.mean(axis=0), self.features.features.columns))
+                                ][::-1]
+        importances = pd.DataFrame(data=importances, columns=self.features.features.columns)
+        importances = importances[sorted_feature_names]
+        feats = pd.DataFrame(columns=['order', 'value', 'name', 'error'])#, \
+                        #dtype={'order': np.int64, 'value': np.float64, 'name':np.object_, 'error': np.float64})
+        feats['order'] = np.arange(len(self.features.features.columns))[::-1]
+        feats['value'] = importances.mean(axis=0).values
+        feats['error'] = importances.std(axis=0).values
+        feats['name'] = sorted_feature_names
+        feats.to_csv(outfolder + "/feats", sep='&', index=False, line_terminator='\\\\\n')#, fmt="%.5f")
+        
+        Plotter.plot_feature_importances(importances, outfolder, 30)
+
+

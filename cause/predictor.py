@@ -1,11 +1,12 @@
+import numpy as np
+import pandas as pd
+
 from sklearn.preprocessing import RobustScaler
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 
 import autosklearn.classification
 import pickle
-
-import numpy as np
 
 
 class Predictor():
@@ -37,9 +38,14 @@ class Predictor():
 class ClassificationSet():
 
     def __init__(self, X, y, c):
-        self.__X = X
-        self.__y = y
-        self.__c = c
+        # merge on index
+        merged_set = pd.merge(X, y, left_index=True, right_index=True)
+        merged_set = pd.merge(merged_set, c, left_index=True, right_index=True)
+        #print(X.shape, y.shape, c.shape)
+        self.__X = merged_set[X.columns]
+        self.__y = merged_set[y.columns]
+        self.__c = merged_set[c.columns]
+        #print(self.__X.shape, self.__y.shape, self.__c.shape)
 
     @property
     def X(self):
@@ -95,9 +101,9 @@ class MalaisePredictor(Predictor):
 
     def predict(self):
         # split into training and test set
-        set = ClassificationSet(
+        clsset = ClassificationSet(
             self.features, self.lstats.winners, self.lstats.costs)
-        train, test = Predictor.__preprocess_and_split(set)
+        train, test = Predictor.__preprocess_and_split(clsset)
 
         if False:
             # train classifier on training set

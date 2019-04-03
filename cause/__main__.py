@@ -10,9 +10,10 @@ from cause.preprocessor import FeatureExtractor
 from cause.preprocessor import LambdaStats
 
 from cause.postprocessor import Postprocessor
+from cause.postprocessor import FeatsPostprocessor
+
 from cause.plotter import Plotter
 from cause.features import Features
-
 from cause.predictor import MalaisePredictor
 
 #name = "ca-compare-3dims"
@@ -39,15 +40,16 @@ outfolder = "/home/diana/ca/processed/" + name
 #DatasetCreator.create(weights, infolder, outfolder, name)
 
 # extract features
-FeatureExtractor.extract(instance_folder, name, outfolder,
-                         in_parallel=True, num_threads=2,
-                         task_queue_file=outfolder + "/features_task_queue")
+#FeatureExtractor.extract(instance_folder, name, outfolder,
+#                         in_parallel=True, num_threads=2,
+#                         task_queue_file=outfolder + "/features_task_queue")
 
-#feats = Features.load(outfolder + "/" + name + "_features.yaml")
-
+feats = Features.load(outfolder + "/" + name + "_features.yaml")
+# plot features as heatmap
+#feats.plot(outfolder)
 
 # load processed dataset
-#ds = ProcessedDataset.load(outfolder + "/" + name + ".yaml")
+ds = ProcessedDataset.load(outfolder + "/" + name + ".yaml")
 
 # some postprocessing: breakdown
 #postp = Postprocessor(ds)
@@ -57,6 +59,10 @@ FeatureExtractor.extract(instance_folder, name, outfolder,
 #breakdown.save_to_latex(outfolder)
 # plot breakdown as heatmap
 #breakdown.plot(outfolder)
+
+# postprocessing: feature importances
+fpostp = FeatsPostprocessor(ds, feats)
+fpostp.save_feature_importances(outfolder)
 
 #weight = 0.5
 #lstats = LambdaStats.load(outfolder + "/" + name + "_lstats_" + str(weight), weight)
