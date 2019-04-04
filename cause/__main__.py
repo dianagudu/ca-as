@@ -14,7 +14,7 @@ from cause.postprocessor import FeatsPostprocessor
 
 from cause.plotter import Plotter
 from cause.features import Features
-from cause.predictor import MalaisePredictor
+from cause.predictor import MALAISEPredictor
 
 #name = "ca-compare-3dims"
 name = "malaise"
@@ -23,9 +23,9 @@ name = "malaise"
 #instance_folder = "/tmp/instances"   # testing!
 #outfolder = "/tmp/out"   # testing!
 
-infolder = "/home/diana/ca/stats/" + name
-instance_folder = "/home/diana/ca/datasets/" + name
-outfolder = "/home/diana/ca/processed/" + name
+#infolder = "/home/diana/ca/stats/%s" % name
+#instance_folder = "/home/diana/ca/datasets/%s" % name
+outfolder = "/home/diana/ca/processed/%s" % name
 
 # 1st workflow: load stats for alg comparison (incl optimal) and plot avg case
 #rsl = RawStatsLoader(infolder, name)
@@ -40,12 +40,10 @@ outfolder = "/home/diana/ca/processed/" + name
 #DatasetCreator.create(weights, infolder, outfolder, name)
 
 # extract features
-#FeatureExtractor.extract(instance_folder, name, outfolder,
-#                         in_parallel=True, num_threads=2,
-#                         task_queue_file=outfolder + "/features_task_queue")
+#FeatureExtractor.extract(instance_folder, name, outfolder)
 
 # load processed dataset
-ds = ProcessedDataset.load(outfolder + "/" + name + ".yaml")
+ds = ProcessedDataset.load("%s/%s.yaml" % (outfolder, name))
 
 ## some postprocessing: breakdown
 #postp = Postprocessor(ds)
@@ -57,7 +55,7 @@ ds = ProcessedDataset.load(outfolder + "/" + name + ".yaml")
 #breakdown.plot(outfolder)
 
 # load processed features
-feats = Features.load(outfolder + "/" + name + "_features.yaml")
+feats = Features.load("%s/%s_features.yaml" % (outfolder, name))
 
 ## postprocessing: feature importances
 #fpostp = FeatsPostprocessor(ds, feats)
@@ -67,5 +65,5 @@ feats = Features.load(outfolder + "/" + name + "_features.yaml")
 
 
 weight = 0.5
-lstats = LambdaStats.load(outfolder + "/" + name + "_lstats_" + str(weight), weight)
-MalaisePredictor(lstats, feats).predict()
+lstats = LambdaStats.load("%s/%s_lstats_%.1f" % (outfolder, name, weight), weight)
+MALAISEPredictor(lstats, feats).run()

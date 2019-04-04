@@ -14,28 +14,14 @@ from cause.helper import Heuristic_Algorithm_Names
 class Predictor():
 
     def __init__(self, lstats):
-        self.__lstats = lstats
+        self.__weight = lstats.weight
 
     @property
-    def lstats(self):
-        return self.__lstats
+    def weight(self):
+        return self.__weight
 
-    def evaluate(self):
+    def run(self):
         pass
-
-    @staticmethod
-    def _preprocess_and_split(clsset):
-        X_train, X_test, y_train, y_test, c_train, c_test = train_test_split(
-            clsset.X, clsset.y, clsset.c,
-            test_size=0.3, stratify=clsset.y, random_state=8)
-        sc = RobustScaler()  # StandardScaler()
-        X_train_std = sc.fit_transform(X_train)
-        X_test_std = sc.transform(X_test)
-
-        train = ClassificationSet(X_train_std, y_train, c_train, clsset.le)
-        test = ClassificationSet(X_test_std, y_test, c_test, clsset.le)
-
-        return train, test
 
 
 class ClassificationSet():
@@ -80,28 +66,41 @@ class ClassificationSet():
     def le(self):
         return self.__le
 
-    @property
-    def y_pred(self):
-        return self.__y_pred
 
-    def predict(self, cls):
-        self.__y_pred = cls.predict(self.X)
+class Evaluator():
 
-    def accuracy(self):
-        return accuracy_score(self.y, self.y_pred)
+    @staticmethod
+    def accuracy(y_true, y_pred):
+        return accuracy_score(y_true, y_pred)
 
-    def mre(self):
-        return np.mean([
-            (
-                self.c[i, self.y_pred[i]] - self.c[i, self.y[i]]
-            ) ** 2 for i in range(len(self.y))
-            ])
+    @staticmethod
+    def mre(y_true, y_pred, costs):
+        return np.mean([(
+                costs[i, y_pred[i]] - costs[i, y_true[i]]
+            ) ** 2 for i in range(len(y_true))])
 
 
-class RandomClassifier():
+class GenericClassifier():
 
-    def __init__(self, labels):
-        self.__labels = labels
+    def __init__(self, train):
+        pass
+
+    def predict(self, test):
+        # by default, returns perfect classification
+        return test.y
+
+    def evaluate(self, test):
+        y_pred = self.predict(test)
+        acc = Evaluator.accuracy(test.y, y_pred)
+        mre = Evaluator.mre(test.y, y_pred, test.c)
+        return acc, mre
+
+
+class RandomClassifier(GenericClassifier):
+
+    def __init__(self, train):
+        super().__init__(train)
+        self.__labels = train.le.transform(train.le.classes_)
         # todo: init random state
         # np.random.seed(xx)
 
@@ -109,53 +108,86 @@ class RandomClassifier():
     def labels(self):
         return self.__labels
 
-    def predict(self, X):
-        return np.random.choice(self.labels, X.shape[0])
+    def predict(self, test):
+        return np.random.choice(self.labels, test.X.shape[0])
 
 
-class MalaisePredictor(Predictor):
+class BestAlgoClassifier(GenericClassifier):
 
-    def __init__(self, lstats, features):
-        super().__init__(lstats)
-        self.__features = features
+    def __init__(self, train):
+        super().__init__(train)
+        # get best algorithm on average
+        self.__best_algo = 0
+
+    def predict(self, test):
+        return 0
+
+
+class MLClassifier(GenericClassifier):
+
+    def __init__(self, train):
+        super().__init__(train)
+        # train classifier on training set
+        self.__cls = autosklearn.classification.AutoSklearnClassifier()
+        self.__cls.fit(train.X, train.y)
 
     @property
-    def features(self):
-        return self.__features
+    def cls(self):
+        return self.__cls
 
-    def predict(self):
+    def dump(self, pickle_file):
+        # print models
+        self.__cls.show_models()
+        # dump model to file
+        with open(pickle_file, 'wb') as fio:
+            pickle.dump(self.cls, fio)
+
+    def predict(self, test):
+        return self.cls.predict(test.X)
+
+
+class MALAISEPredictor(Predictor):
+
+    def __init__(self, lstats, features):
+        self.__clsset = ClassificationSet.sanitize_and_init(
+            features.features, lstats.winners, lstats.costs)
+  
+    @property
+    def clsset(self):
+        return self.__clsset
+
+    def run(self, outfolder="/tmp"):
+        pickle_file = "%s/ml_cls_model" % (outfolder)
+
         # split into training and test set
-        clsset = ClassificationSet.sanitize_and_init(
-            self.features.features, self.lstats.winners, self.lstats.costs)
-        train, test = Predictor._preprocess_and_split(clsset)
-
-        if True:
-            # train classifier on training set
-            cls = autosklearn.classification.AutoSklearnClassifier()
-            cls.fit(train.X, train.y)
-            # print models
-            cls.show_models()
-            # dump model to file
-            #with open(pickled_model, 'wb') as fio:
-            #    pickle.dump(cls, fio)
-
-            # predict winners using trained model for training and test sets
-            train.predict(cls)
-            test.predict(cls)
-
-            print("acc [train]", train.accuracy())
-            print("acc [test]", test.accuracy())
-            print("mre [train]", train.mre())
-            print("mre [test]", test.mre())
+        train, test = self._preprocess_and_split()
 
         # random prediction
-        rcls = RandomClassifier(clsset.le.transform(clsset.le.classes_))
-        train.predict(rcls)
-        test.predict(rcls)
+        rand_cls = RandomClassifier(train)
+        rand_cls.evaluate(train)
+        rand_cls.evaluate(test)
 
-        print("acc [train]", train.accuracy())
-        print("acc [test]", test.accuracy())
-        print("mre [train]", train.mre())
-        print("mre [test]", test.mre())
+        # best algo on average prediction
+        algo_cls = BestAlgoClassifier(train)
+        
+        # ml-based prediction
+        ml_cls = MLClassifier(train)
+        ml_cls.dump(pickle_file)
+
+    # todo: function to dump stats to file
+
+
+    def _preprocess_and_split(self):
+        X_train, X_test, y_train, y_test, c_train, c_test = train_test_split(
+            self.clsset.X, self.clsset.y, self.clsset.c,
+            test_size=0.3, stratify=self.clsset.y, random_state=8)
+        sc = RobustScaler()  # StandardScaler()
+        X_train_std = sc.fit_transform(X_train)
+        X_test_std = sc.transform(X_test)
+
+        train = ClassificationSet(X_train_std, y_train, c_train, self.clsset.le)
+        test = ClassificationSet(X_test_std, y_test, c_test, self.clsset.le)
+
+        return train, test
 
 
