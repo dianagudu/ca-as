@@ -32,12 +32,9 @@ outfolder = "/home/deedee/ca/processed/" + name
 
 def main():
     # quick'n'dirty parallel extraction
-    # print command line arguments
-    for arg in sys.argv[1:]:
-        print(arg)
-    task_queue_file = sys.argv[1]
+    instance_file = sys.argv[1]
     outfile = sys.argv[2]
-    FeatureExtractor.extract_from_queue(instance_folder, name, outfolder, task_queue_file, outfile)
+    FeatureExtractor.extract_from_instance(instance_file, outfile)
 
 if __name__ == "__main__":
     main()
