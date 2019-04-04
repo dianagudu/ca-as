@@ -1,12 +1,14 @@
 import numpy as np
 import pandas as pd
 
-from sklearn.preprocessing import RobustScaler
+from sklearn.preprocessing import RobustScaler, LabelEncoder
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 
 import autosklearn.classification
 import pickle
+
+from cause.helper import Heuristic_Algorithm_Names
 
 
 class Predictor():
@@ -22,30 +24,45 @@ class Predictor():
         pass
 
     @staticmethod
-    def __preprocess_and_split(set):
+    def _preprocess_and_split(clsset):
         X_train, X_test, y_train, y_test, c_train, c_test = train_test_split(
-            set.X, set.y, set.c, test_size=0.3, stratify=set.y, random_state=8)
+            clsset.X, clsset.y, clsset.c,
+            test_size=0.3, stratify=clsset.y, random_state=8)
         sc = RobustScaler()  # StandardScaler()
         X_train_std = sc.fit_transform(X_train)
         X_test_std = sc.transform(X_test)
 
-        train = ClassificationSet(X_train_std, y_train, c_train)
-        test = ClassificationSet(X_test_std, y_test, c_test)
+        train = ClassificationSet(X_train_std, y_train, c_train, clsset.le)
+        test = ClassificationSet(X_test_std, y_test, c_test, clsset.le)
 
         return train, test
 
 
 class ClassificationSet():
 
-    def __init__(self, X, y, c):
+    def __init__(self, X, y, c, le):
+        self.__X = X
+        self.__y = y
+        self.__c = c
+        self.__le = le
+
+    @staticmethod
+    def sanitize_and_init(features, winners, costs):
+        # encode class labels to numbers
+        le = LabelEncoder().fit([x.name for x in Heuristic_Algorithm_Names])
         # merge on index
-        merged_set = pd.merge(X, y, left_index=True, right_index=True)
-        merged_set = pd.merge(merged_set, c, left_index=True, right_index=True)
-        #print(X.shape, y.shape, c.shape)
-        self.__X = merged_set[X.columns]
-        self.__y = merged_set[y.columns]
-        self.__c = merged_set[c.columns]
-        #print(self.__X.shape, self.__y.shape, self.__c.shape)
+        merged_set = pd.merge(features, winners, left_index=True, right_index=True)
+        merged_set = pd.merge(merged_set, costs, left_index=True, right_index=True)
+        # reorder cost columns to be sorted in encoded order
+        new_costs_columns = le.inverse_transform(np.sort(le.transform(costs.columns)))
+        # turn everything into numpy arrays
+        X = merged_set[features.columns].values
+        y = le.transform(merged_set[winners.columns].values)
+        c = merged_set[new_costs_columns].values
+        # reshape y
+        y = np.reshape(y, (y.shape[0], 1))
+        
+        return ClassificationSet(X, y, c, le)
 
     @property
     def X(self):
@@ -60,8 +77,12 @@ class ClassificationSet():
         return self.__c
 
     @property
+    def le(self):
+        return self.__le
+
+    @property
     def y_pred(self):
-        return self.__y_pred   # todo: dict of predictions for each cls used?
+        return self.__y_pred
 
     def predict(self, cls):
         self.__y_pred = cls.predict(self.X)
@@ -70,7 +91,11 @@ class ClassificationSet():
         return accuracy_score(self.y, self.y_pred)
 
     def mre(self):
-        return ((self.c[self.y_pred] - self.c[self.y]) ** 2).mean()
+        return np.mean([
+            (
+                self.c[i, self.y_pred[i]] - self.c[i, self.y[i]]
+            ) ** 2 for i in range(len(self.y))
+            ])
 
 
 class RandomClassifier():
@@ -85,7 +110,6 @@ class RandomClassifier():
         return self.__labels
 
     def predict(self, X):
-        # use shape of X to return an array
         return np.random.choice(self.labels, X.shape[0])
 
 
@@ -101,11 +125,11 @@ class MalaisePredictor(Predictor):
 
     def predict(self):
         # split into training and test set
-        clsset = ClassificationSet(
-            self.features, self.lstats.winners, self.lstats.costs)
-        train, test = Predictor.__preprocess_and_split(clsset)
+        clsset = ClassificationSet.sanitize_and_init(
+            self.features.features, self.lstats.winners, self.lstats.costs)
+        train, test = Predictor._preprocess_and_split(clsset)
 
-        if False:
+        if True:
             # train classifier on training set
             cls = autosklearn.classification.AutoSklearnClassifier()
             cls.fit(train.X, train.y)
@@ -125,7 +149,7 @@ class MalaisePredictor(Predictor):
             print("mre [test]", test.mre())
 
         # random prediction
-        rcls = RandomClassifier(self.lstats.costs.columns.values)
+        rcls = RandomClassifier(clsset.le.transform(clsset.le.classes_))
         train.predict(rcls)
         test.predict(rcls)
 

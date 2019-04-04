@@ -85,7 +85,8 @@ class FeatsPostprocessor(Postprocessor):
         importances = np.empty(shape=(0,0))
         for weight in self.dataset.weights:
             lstats = self.dataset.lstats[weight]
-            clsset = ClassificationSet(self.features.features, lstats.winners, lstats.costs)
+            clsset = ClassificationSet.sanitize_and_init(
+                self.features.features, lstats.winners, lstats.costs)
             clf = ExtraTreesClassifier()
             clf = clf.fit(clsset.X, clsset.y)
             if importances.shape[0] == 0:

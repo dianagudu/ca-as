@@ -44,26 +44,28 @@ outfolder = "/home/diana/ca/processed/" + name
 #                         in_parallel=True, num_threads=2,
 #                         task_queue_file=outfolder + "/features_task_queue")
 
-feats = Features.load(outfolder + "/" + name + "_features.yaml")
-# plot features as heatmap
-#feats.plot(outfolder)
-
 # load processed dataset
 ds = ProcessedDataset.load(outfolder + "/" + name + ".yaml")
 
-# some postprocessing: breakdown
+## some postprocessing: breakdown
 #postp = Postprocessor(ds)
-# get breakdown by algorithms and weights
+## get breakdown by algorithms and weights
 #breakdown = postp.breakdown()
-# save to file for latex table
+## save to file for latex table
 #breakdown.save_to_latex(outfolder)
-# plot breakdown as heatmap
+## plot breakdown as heatmap
 #breakdown.plot(outfolder)
 
-# postprocessing: feature importances
-fpostp = FeatsPostprocessor(ds, feats)
-fpostp.save_feature_importances(outfolder)
+# load processed features
+feats = Features.load(outfolder + "/" + name + "_features.yaml")
 
-#weight = 0.5
-#lstats = LambdaStats.load(outfolder + "/" + name + "_lstats_" + str(weight), weight)
-#MalaisePredictor(lstats, feats).predict()
+## postprocessing: feature importances
+#fpostp = FeatsPostprocessor(ds, feats)
+#fpostp.save_feature_importances(outfolder)
+## plot features as heatmap
+#feats.plot(outfolder)
+
+
+weight = 0.5
+lstats = LambdaStats.load(outfolder + "/" + name + "_lstats_" + str(weight), weight)
+MalaisePredictor(lstats, feats).predict()
