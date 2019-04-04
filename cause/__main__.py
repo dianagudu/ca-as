@@ -15,6 +15,9 @@ from cause.features import Features
 
 from cause.predictor import MalaisePredictor
 
+
+import sys
+
 #name = "ca-compare-3dims"
 name = "malaise"
 
@@ -22,9 +25,22 @@ name = "malaise"
 #instance_folder = "/tmp/instances"   # testing!
 #outfolder = "/tmp/out"   # testing!
 
-infolder = "/home/diana/ca/stats/" + name
-instance_folder = "/home/diana/ca/datasets/" + name
-outfolder = "/home/diana/ca/processed/" + name
+infolder = "/home/deedee/ca/stats/" + name
+instance_folder = "/home/deedee/ca/datasets/" + name
+outfolder = "/home/deedee/ca/processed/" + name
+
+
+def main():
+    # quick'n'dirty parallel extraction
+    # print command line arguments
+    for arg in sys.argv[1:]:
+        print(arg)
+    task_queue_file = sys.argv[1]
+    outfile = sys.argv[2]
+    FeatureExtractor.extract_from_queue(instance_folder, name, outfolder, task_queue_file, outfile)
+
+if __name__ == "__main__":
+    main()
 
 # 1st workflow: load stats for alg comparison (incl optimal) and plot avg case
 #rsl = RawStatsLoader(infolder, name)
@@ -39,9 +55,11 @@ outfolder = "/home/diana/ca/processed/" + name
 #DatasetCreator.create(weights, infolder, outfolder, name)
 
 # extract features
-FeatureExtractor.extract(instance_folder, name, outfolder,
-                         in_parallel=True, num_threads=2,
-                         task_queue_file=outfolder + "/features_task_queue")
+#FeatureExtractor.extract(instance_folder, name, outfolder,
+#                         in_parallel=True, num_threads=13,
+#                         task_queue_file=outfolder + "/features_task_queue")
+
+
 
 #feats = Features.load(outfolder + "/" + name + "_features.yaml")
 

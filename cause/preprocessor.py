@@ -187,6 +187,13 @@ class DatasetCreator():
 
 class FeatureExtractor():
 
+
+    @staticmethod
+    def extract_from_queue(infolder, name, outfolder, task_queue_file, outfile):
+        with open(task_queue_file, "r") as f:
+            for instance_file in f.read().splitlines():
+                FeatureExtractor.extract_from_instance(instance_file, outfile)
+
     @staticmethod
     def extract(infolder, name, outfolder,
                 in_parallel=False, num_threads=2, task_queue_file=None):
