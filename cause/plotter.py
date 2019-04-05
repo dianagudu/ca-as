@@ -29,7 +29,7 @@ class Plotter():
                                 rotation = 90, fontsize = 8)
         snsplot.set_yticklabels(snsplot.get_yticklabels(),
                                 rotation = 0, fontsize = 8)
-        outfile = outfolder + "/feature_heatmap_" + features.name + ".png"
+        outfile = "%s/feature_heatmap_%s.png" % (outfolder, features.name)
         snsplot.get_figure().savefig(outfile, bbox_inches='tight', dpi=300)
 
     @staticmethod
@@ -50,7 +50,7 @@ class Plotter():
         minor_ticks = np.array([0.02])
         ax.set_xticks(minor_ticks, minor=True)
         ax.grid(which='minor', color='r', zorder=1., linestyle='--')
-        plt.savefig(outfolder + "/feature_importances.png", bbox_inches='tight', dpi=300)
+        plt.savefig("%s/feature_importances.png" % outfolder, bbox_inches='tight', dpi=300)
 
     @staticmethod
     def plot_breakdown(breakdown, outfolder="/tmp"):
@@ -65,7 +65,7 @@ class Plotter():
         snsplot.set_xlabel("$\lambda$", fontsize=18)
         # increase fontsize for colorbar
         ax.collections[0].colorbar.ax.tick_params(labelsize=16)
-        outfile = outfolder + "/breakdown_" + breakdown.name + ".png"
+        outfile = "%s/breakdown_%s.png" % (outfolder, breakdown.name)
         snsplot.get_figure().savefig(outfile, bbox_inches="tight", dpi=300)
 
     @staticmethod

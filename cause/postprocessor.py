@@ -35,7 +35,7 @@ class Breakdown():
         return self.__name
 
     def save_to_latex(self, outfolder="/tmp", weight=1.):
-        outfile = outfolder + "/breakdown_" + self.name
+        outfile = "%s/breakdown_%s" % (outfolder, self.name)
         index = np.where(self.weights==weight)[0][0]  # location for lambda=weight
         breakdown_perc = self.data[:,index] * 100. / self.data[:,index].sum()
         # write latex table to file
@@ -105,7 +105,8 @@ class FeatsPostprocessor(Postprocessor):
         feats['value'] = importances.mean(axis=0).values
         feats['error'] = importances.std(axis=0).values
         feats['name'] = sorted_feature_names
-        feats.to_csv(outfolder + "/feats", sep='&', index=False, line_terminator='\\\\\n')#, fmt="%.5f")
+        feats.to_csv("%s/feats" % outfolder,
+                     sep='&', index=False, line_terminator='\\\\\n')
         
         Plotter.plot_feature_importances(importances, outfolder, 30)
 

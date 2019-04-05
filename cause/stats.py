@@ -72,8 +72,8 @@ class RawStatsOptimal(RawStats):
         return times.drop(index_infeasible)
 
     def plot(self, outfolder="/tmp"):
-        outfile_welfare = outfolder + "/" + "welfare_" + self.name
-        outfile_time = outfolder + "/" + "time_" + self.name
+        outfile_welfare = "%s/welfare_%s" % (outfolder, self.name)
+        outfile_time = "%s/time_%s" % (outfolder, self.name)
 
         welfares = self.get_welfares_feasible()
         times = self.get_times_feasible()
@@ -116,16 +116,14 @@ class RawStatsRandom(RawStats):
         return welfares
 
     def plot(self, outfolder="/tmp"):
-        outfile = outfolder + "/random_" + self.name
+        outfile = "%s/random_%s" % (outfolder, self.name)
         welfares = self.__get_normalized_welfares()
         data = []
         for algo in self.algos:
             data.append(welfares[welfares.algorithm == algo].welfare.values)
-            print(
-                "[" + algo + "]", "min =",
+            print("[%s] min = %.2f, max = %.2f" % (algo,
                 welfares[welfares.algorithm == algo].welfare.min(),
-                ", max =",
-                welfares[welfares.algorithm == algo].welfare.max())
+                welfares[welfares.algorithm == algo].welfare.max()))
         Plotter.boxplot_random(data, self.algos, outfile)
 
 
@@ -171,7 +169,7 @@ class ProcessedStats():
 
     def save(self, prefix):
         info = self.to_dict(prefix)
-        with open(prefix + "_pstats.yaml", "w") as f:
+        with open("%s_pstats.yaml" % prefix, "w") as f:
             yaml.dump(info, f)
         self.welfares.to_csv(info["welfares"], float_format='%g')
         self.times.to_csv(info["times"], float_format='%g')
@@ -191,10 +189,10 @@ class ProcessedStats():
         return {
             "name": self.name,
             "algos": self.algos,
-            "welfares": prefix + ".welfares",
-            "times": prefix + ".times",
-            "costw": prefix + ".costw",
-            "costt": prefix + ".costt"
+            "welfares": "%s.welfares" % prefix,
+            "times": "%s.times" % prefix,
+            "costw": "%s.costw" % prefix,
+            "costt": "%s.costt" % prefix
         }
 
 
@@ -230,13 +228,13 @@ class LambdaStats():
 
     @staticmethod
     def load(filename, weight):
-        costs = pd.read_csv(filename + ".costs", index_col='instance')
-        winners = pd.read_csv(filename + ".winners", index_col='instance')
+        costs = pd.read_csv("%s.costs" % filename, index_col='instance')
+        winners = pd.read_csv("%s.winners" % filename, index_col='instance')
         return LambdaStats(weight, costs, winners)
 
     def save(self, filename):
-        self.costs.to_csv(filename + ".costs", float_format='%g')
-        self.winners.to_csv(filename + ".winners", float_format='%g')
+        self.costs.to_csv("%s.costs" % filename, float_format='%g')
+        self.winners.to_csv("%s.winners" % filename, float_format='%g')
 
 
 class ProcessedDataset():
@@ -280,5 +278,5 @@ class ProcessedDataset():
         lstats = {}
         for weight in weights:
             lstats[weight] = LambdaStats.load(
-                lstats_file_prefix + str(weight), weight)
+                "%s%.2f" % (lstats_file_prefix, weight), weight)
         return ProcessedDataset(pstats, weights, lstats)
