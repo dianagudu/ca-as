@@ -172,7 +172,7 @@ class DatasetCreator():
         ls_preproc = LambdaStatsPreprocessor(pstats)
         for weight in weights:
             lstats = ls_preproc.process(weight)
-            lstats.save(lstats_file_prefix + str(weight))
+            lstats.save("%s%.1f" % (lstats_file_prefix, weight))
 
         # save dataset metafile
         dobj = {

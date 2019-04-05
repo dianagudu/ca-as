@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import csv
 
 from sklearn.preprocessing import RobustScaler, LabelEncoder
 from sklearn.model_selection import train_test_split
@@ -85,6 +86,14 @@ class GenericClassifier():
     def __init__(self, train):
         pass
 
+    @property    
+    def algo(self):
+        return 0
+
+    @property
+    def name(self):
+        return "GENERIC"
+
     def predict(self, test):
         # by default, returns perfect classification
         return test.y
@@ -105,6 +114,10 @@ class RandomClassifier(GenericClassifier):
         # np.random.seed(xx)
 
     @property
+    def name(self):
+        return "RANDOM"
+
+    @property
     def labels(self):
         return self.__labels
 
@@ -116,11 +129,20 @@ class BestAlgoClassifier(GenericClassifier):
 
     def __init__(self, train):
         super().__init__(train)
-        # get best algorithm on average
-        self.__best_algo = 0
+        # get best algorithm on average on training set
+        u, indices = np.unique(train.y, return_inverse=True)
+        self.__algo = u[np.argmax(np.bincount(indices))]
+
+    @property    
+    def algo(self):
+        return self.__algo
+
+    @property
+    def name(self):
+        return "BEST"
 
     def predict(self, test):
-        return 0
+        return np.full(test.X.shape[0], self.algo, dtype=int)
 
 
 class MLClassifier(GenericClassifier):
@@ -130,6 +152,10 @@ class MLClassifier(GenericClassifier):
         # train classifier on training set
         self.__cls = autosklearn.classification.AutoSklearnClassifier()
         self.__cls.fit(train.X, train.y)
+
+    @property
+    def name(self):
+        return "MALAISE"
 
     @property
     def cls(self):
@@ -149,6 +175,7 @@ class MLClassifier(GenericClassifier):
 class MALAISEPredictor(Predictor):
 
     def __init__(self, lstats, features):
+        super().__init__(lstats)
         self.__clsset = ClassificationSet.sanitize_and_init(
             features.features, lstats.winners, lstats.costs)
   
@@ -157,30 +184,52 @@ class MALAISEPredictor(Predictor):
         return self.__clsset
 
     def run(self, outfolder="/tmp"):
-        pickle_file = "%s/ml_cls_model" % (outfolder)
+        pickle_file = "%s/malaise_cls_model" % outfolder
+        stats_file = "%s/malaise_stats" % outfolder
 
         # split into training and test set
         train, test = self._preprocess_and_split()
 
         # random prediction
         rand_cls = RandomClassifier(train)
-        rand_cls.evaluate(train)
-        rand_cls.evaluate(test)
+        self.__dump_stats(stats_file, rand_cls, train, test)
 
         # best algo on average prediction
         algo_cls = BestAlgoClassifier(train)
+        self.__dump_stats(stats_file, algo_cls, train, test)
         
         # ml-based prediction
-        ml_cls = MLClassifier(train)
-        ml_cls.dump(pickle_file)
+        #ml_cls = MLClassifier(train)
+        #self.__dump_stats(stats_file, ml_cls, train, test)
+        #ml_cls.dump(pickle_file)
 
-    # todo: function to dump stats to file
+    def __dump_stats(self, stats_file, clsf, train, test):
+        acc_train, mre_train = clsf.evaluate(train)
+        acc_test, mre_test = clsf.evaluate(test)
+        stats = [clsf.name, self.weight,
+                 self.clsset.le.inverse_transform(clsf.algo),
+                 acc_train, acc_test, mre_train, mre_test]
+        with open(stats_file, "a") as f:
+            writer = csv.writer(f).writerow(stats)
 
 
     def _preprocess_and_split(self):
+        X = self.clsset.X
+        y = self.clsset.y
+        c = self.clsset.c
+        ## HACK: for stratified sampling, remove events from classes with just 1 member
+        unique_elements, counts_elements = np.unique(y, return_counts=True)
+        one_member_classes = [unique_elements[i]
+                              for i, count in enumerate(counts_elements)
+                              if count == 1]
+        for outclass in one_member_classes:
+            index = np.argwhere(y==outclass)[0][0]
+            y = np.delete(y, index)
+            X = np.delete(X, index, 0)
+            c = np.delete(c, index, 0)
+
         X_train, X_test, y_train, y_test, c_train, c_test = train_test_split(
-            self.clsset.X, self.clsset.y, self.clsset.c,
-            test_size=0.3, stratify=self.clsset.y, random_state=8)
+            X, y, c, test_size=0.3, stratify=y, random_state=8)
         sc = RobustScaler()  # StandardScaler()
         X_train_std = sc.fit_transform(X_train)
         X_test_std = sc.transform(X_test)

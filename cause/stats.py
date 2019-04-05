@@ -278,5 +278,5 @@ class ProcessedDataset():
         lstats = {}
         for weight in weights:
             lstats[weight] = LambdaStats.load(
-                "%s%.2f" % (lstats_file_prefix, weight), weight)
+                "%s%.1f" % (lstats_file_prefix, weight), weight)
         return ProcessedDataset(pstats, weights, lstats)

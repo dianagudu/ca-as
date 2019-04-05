@@ -63,7 +63,9 @@ feats = Features.load("%s/%s_features.yaml" % (outfolder, name))
 ## plot features as heatmap
 #feats.plot(outfolder)
 
+#weight = 0.5
+#lstats = LambdaStats.load("%s/%s_lstats_%.1f" % (outfolder, name, weight), weight)
+#MALAISEPredictor(lstats, feats).run()
 
-weight = 0.5
-lstats = LambdaStats.load("%s/%s_lstats_%.1f" % (outfolder, name, weight), weight)
-MALAISEPredictor(lstats, feats).run()
+for weight in ds.weights:
+    MALAISEPredictor(ds.lstats[weight], feats).run(outfolder)
