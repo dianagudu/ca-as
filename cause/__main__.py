@@ -10,10 +10,11 @@ from cause.preprocessor import FeatureExtractor
 from cause.preprocessor import LambdaStats
 
 from cause.postprocessor import Postprocessor
+from cause.postprocessor import FeatsPostprocessor
+
 from cause.plotter import Plotter
 from cause.features import Features
-
-from cause.predictor import MalaisePredictor
+from cause.predictor import MALAISEPredictor
 
 
 import sys
@@ -31,10 +32,12 @@ outfolder = "/home/deedee/ca/processed/" + name
 
 
 def main():
-    # quick'n'dirty parallel extraction
-    instance_file = sys.argv[1]
+    # get weight and stats file name
+    weight = sys.argv[1]
     outfile = sys.argv[2]
-    FeatureExtractor.extract_from_instance(instance_file, outfile)
+    feats = Features.load("%s/%s_features.yaml" % (outfolder, name))
+    lstats = LambdaStats.load("%s/%s_lstats_%.1f" % (outfolder, name, weight), weight)
+    MALAISEPredictor(lstats, feats).run()
 
 if __name__ == "__main__":
     main()
@@ -52,27 +55,32 @@ if __name__ == "__main__":
 #DatasetCreator.create(weights, infolder, outfolder, name)
 
 # extract features
-#FeatureExtractor.extract(instance_folder, name, outfolder,
-#                         in_parallel=True, num_threads=13,
-#                         task_queue_file=outfolder + "/features_task_queue")
-
-
-
-#feats = Features.load(outfolder + "/" + name + "_features.yaml")
-
+#FeatureExtractor.extract(instance_folder, name, outfolder)
 
 # load processed dataset
-#ds = ProcessedDataset.load(outfolder + "/" + name + ".yaml")
+#ds = ProcessedDataset.load("%s/%s.yaml" % (outfolder, name))
 
-# some postprocessing: breakdown
+## some postprocessing: breakdown
 #postp = Postprocessor(ds)
-# get breakdown by algorithms and weights
+## get breakdown by algorithms and weights
 #breakdown = postp.breakdown()
-# save to file for latex table
+## save to file for latex table
 #breakdown.save_to_latex(outfolder)
-# plot breakdown as heatmap
+## plot breakdown as heatmap
 #breakdown.plot(outfolder)
 
+# load processed features
+#feats = Features.load("%s/%s_features.yaml" % (outfolder, name))
+
+## postprocessing: feature importances
+#fpostp = FeatsPostprocessor(ds, feats)
+#fpostp.save_feature_importances(outfolder)
+## plot features as heatmap
+#feats.plot(outfolder)
+
 #weight = 0.5
-#lstats = LambdaStats.load(outfolder + "/" + name + "_lstats_" + str(weight), weight)
-#MalaisePredictor(lstats, feats).predict()
+#lstats = LambdaStats.load("%s/%s_lstats_%.1f" % (outfolder, name, weight), weight)
+#MALAISEPredictor(lstats, feats).run()
+
+#for weight in ds.weights:
+#    MALAISEPredictor(ds.lstats[weight], feats).run(outfolder)

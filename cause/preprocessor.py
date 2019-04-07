@@ -157,10 +157,10 @@ class DatasetCreator():
     @staticmethod
     def create(weights, infolder, outfolder, name):
         # filenames
-        prefix = outfolder + "/" + name
-        pstats_file = prefix + "_pstats.yaml"
-        lstats_file_prefix = prefix + "_lstats_"
-        metafile = prefix + ".yaml"
+        prefix = "%s/%s" % (outfolder, name)
+        pstats_file = "%s_pstats.yaml" % prefix
+        lstats_file_prefix = "%s_lstats_" % prefix
+        metafile = "%s.yaml" % prefix
 
         # load raw stats
         # process and save raw stats
@@ -172,7 +172,7 @@ class DatasetCreator():
         ls_preproc = LambdaStatsPreprocessor(pstats)
         for weight in weights:
             lstats = ls_preproc.process(weight)
-            lstats.save(lstats_file_prefix + str(weight))
+            lstats.save("%s%.1f" % (lstats_file_prefix, weight))
 
         # save dataset metafile
         dobj = {
@@ -200,9 +200,9 @@ class FeatureExtractor():
         info = {
             "infolder": infolder,
             "name": name,
-            "features": outfolder + "/" + name + ".features"
+            "features": "%s/%s.features" % (outfolder, name)
         }
-        with open(outfolder + "/" + name + "_features.yaml", "w") as f:
+        with open("%s/%s_features.yaml" % (outfolder, name), "w") as f:
             yaml.dump(info, f)
 
         # write header to file

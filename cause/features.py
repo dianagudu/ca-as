@@ -1,6 +1,8 @@
 import yaml
 import pandas as pd
 
+from cause.plotter import Plotter
+
 
 class Features():
 
@@ -31,3 +33,6 @@ class Features():
     def from_dict(dobj):
         features = pd.read_csv(dobj["features"], index_col='instance')
         return Features(dobj["infolder"], dobj["name"], features)
+
+    def plot(self, outfolder="/tmp"):
+        Plotter.plot_feature_heatmap(self, outfolder)
