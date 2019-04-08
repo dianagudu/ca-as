@@ -37,7 +37,8 @@ def main():
     outfile = sys.argv[2]
     feats = Features.load("%s/%s_features.yaml" % (outfolder, name))
     lstats = LambdaStats.load("%s/%s_lstats_%.1f" % (outfolder, name, weight), weight)
-    MALAISEPredictor(lstats, feats).run()
+    MALAISEPredictor(lstats, feats).run(
+        outfolder, "%s/malaise_stats_%.1f" % (outfolder, weight))
 
 if __name__ == "__main__":
     main()
@@ -83,4 +84,5 @@ if __name__ == "__main__":
 #MALAISEPredictor(lstats, feats).run()
 
 #for weight in ds.weights:
-#    MALAISEPredictor(ds.lstats[weight], feats).run(outfolder)
+#    MALAISEPredictor(ds.lstats[weight], feats).run(
+#        outfolder, "%s/malaise_stats_%.1f" % (outfolder, weight))

@@ -183,9 +183,8 @@ class MALAISEPredictor(Predictor):
     def clsset(self):
         return self.__clsset
 
-    def run(self, outfolder="/tmp"):
+    def run(self, outfolder="/tmp", stats_file="/tmp/malaise_stats"):
         pickle_file = "%s/malaise_cls_model" % outfolder
-        stats_file = "%s/malaise_stats" % outfolder
 
         # split into training and test set
         train, test = self._preprocess_and_split()
@@ -199,9 +198,9 @@ class MALAISEPredictor(Predictor):
         self.__dump_stats(stats_file, algo_cls, train, test)
         
         # ml-based prediction
-        #ml_cls = MLClassifier(train)
-        #self.__dump_stats(stats_file, ml_cls, train, test)
-        #ml_cls.dump(pickle_file)
+        ml_cls = MLClassifier(train)
+        self.__dump_stats(stats_file, ml_cls, train, test)
+        ml_cls.dump(pickle_file)
 
     def __dump_stats(self, stats_file, clsf, train, test):
         acc_train, mre_train = clsf.evaluate(train)
@@ -210,7 +209,7 @@ class MALAISEPredictor(Predictor):
                  self.clsset.le.inverse_transform(clsf.algo),
                  acc_train, acc_test, mre_train, mre_test]
         with open(stats_file, "a") as f:
-            writer = csv.writer(f).writerow(stats)
+            csv.writer(f).writerow(stats)
 
 
     def _preprocess_and_split(self):
