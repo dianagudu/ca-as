@@ -68,4 +68,5 @@ feats = Features.load("%s/%s_features.yaml" % (outfolder, name))
 #MALAISEPredictor(lstats, feats).run()
 
 for weight in ds.weights:
-    MALAISEPredictor(ds.lstats[weight], feats).run(outfolder)
+    MALAISEPredictor(ds.lstats[weight], feats).run(
+        outfolder, "%s/malaise_stats_%.1f" % (outfolder, weight))
