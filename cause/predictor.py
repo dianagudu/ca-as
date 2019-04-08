@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import time
 
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import accuracy_score
@@ -116,8 +117,8 @@ class RandomClassifier(GenericClassifier):
     def __init__(self, train):
         super().__init__(train)
         self.__labels = train.le.transform(train.le.classes_)
-        # todo: init random state
-        # np.random.seed(xx)
+        # init random state
+        np.random.seed(time.time())
 
     @property
     def name(self):

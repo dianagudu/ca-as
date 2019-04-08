@@ -132,9 +132,10 @@ class MALAISEPredictor(Predictor):
         # split into training and test set
         train, test = self._preprocess_and_split()
 
-        # random prediction
+        # random prediction -> run 100 times
         rand_cls = RandomClassifier(train)
-        self.__dump_stats(stats_file, rand_cls, train, test)
+        for _ in range(100):
+            self.__dump_stats(stats_file, rand_cls, train, test)
 
         # best algo on average prediction
         algo_cls = BestAlgoClassifier(train)
