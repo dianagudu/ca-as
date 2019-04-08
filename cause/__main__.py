@@ -33,7 +33,7 @@ outfolder = "/home/deedee/ca/processed/" + name
 
 def main():
     # get weight and stats file name
-    weight = sys.argv[1]
+    weight = float(sys.argv[1])
     outfile = sys.argv[2]
     feats = Features.load("%s/%s_features.yaml" % (outfolder, name))
     lstats = LambdaStats.load("%s/%s_lstats_%.1f" % (outfolder, name, weight), weight)
