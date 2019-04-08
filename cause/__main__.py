@@ -14,7 +14,7 @@ from cause.postprocessor import FeatsPostprocessor
 
 from cause.plotter import Plotter
 from cause.features import Features
-from cause.predictor import MALAISEPredictor
+from cause.malaise import MALAISEPredictor
 
 
 import sys
@@ -34,11 +34,11 @@ outfolder = "/home/deedee/ca/processed/" + name
 def main():
     # get weight and stats file name
     weight = float(sys.argv[1])
-    outfile = sys.argv[2]
+    num_processes = int(sys.argv[2])
     feats = Features.load("%s/%s_features.yaml" % (outfolder, name))
     lstats = LambdaStats.load("%s/%s_lstats_%.1f" % (outfolder, name, weight), weight)
     MALAISEPredictor(lstats, feats).run(
-        outfolder, "%s/malaise_stats_%.1f" % (outfolder, weight))
+        outfolder=outfolder, num_processes=num_processes)
 
 if __name__ == "__main__":
     main()
@@ -81,8 +81,9 @@ if __name__ == "__main__":
 
 #weight = 0.5
 #lstats = LambdaStats.load("%s/%s_lstats_%.1f" % (outfolder, name, weight), weight)
-#MALAISEPredictor(lstats, feats).run()
+#MALAISEPredictor(lstats, feats).run(
+#    outfolder=outfolder, num_processes=8)
 
 #for weight in ds.weights:
 #    MALAISEPredictor(ds.lstats[weight], feats).run(
-#        outfolder, "%s/malaise_stats_%.1f" % (outfolder, weight))
+#        outfolder=outfolder, num_processes=6)
