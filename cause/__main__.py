@@ -14,7 +14,7 @@ from cause.postprocessor import FeatsPostprocessor
 
 from cause.plotter import Plotter
 from cause.features import Features
-from cause.predictor import MALAISEPredictor
+from cause.malaise import MALAISEPredictor
 
 #name = "ca-compare-3dims"
 name = "malaise"
@@ -65,8 +65,9 @@ feats = Features.load("%s/%s_features.yaml" % (outfolder, name))
 
 #weight = 0.5
 #lstats = LambdaStats.load("%s/%s_lstats_%.1f" % (outfolder, name, weight), weight)
-#MALAISEPredictor(lstats, feats).run()
+#MALAISEPredictor(lstats, feats).run(
+#    outfolder=outfolder, num_processes=8)
 
 for weight in ds.weights:
     MALAISEPredictor(ds.lstats[weight], feats).run(
-        outfolder, "%s/malaise_stats_%.1f" % (outfolder, weight))
+        outfolder=outfolder, num_processes=6)
