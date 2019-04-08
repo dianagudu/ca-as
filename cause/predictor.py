@@ -118,7 +118,7 @@ class RandomClassifier(GenericClassifier):
         super().__init__(train)
         self.__labels = train.le.transform(train.le.classes_)
         # init random state
-        np.random.seed(time.time())
+        np.random.seed(int(time.time()))
 
     @property
     def name(self):
