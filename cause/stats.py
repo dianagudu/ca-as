@@ -244,6 +244,11 @@ class LambdaStats():
         self.costs.to_csv("%s.costs" % filename, float_format='%g')
         self.winners.to_csv("%s.winners" % filename, float_format='%g')
 
+    def filter(self, algos):
+        new_costs = self.costs[algos]
+        new_winners = new_costs.idxmin(axis=1).to_frame().rename(columns={0: 'winner'})
+        return LambdaStats(self.weight, new_costs, new_winners)
+
 
 class ProcessedDataset():
 
@@ -288,3 +293,12 @@ class ProcessedDataset():
             lstats[weight] = LambdaStats.load(
                 "%s%.1f" % (lstats_file_prefix, weight), weight)
         return ProcessedDataset(pstats, weights, lstats)
+
+    def filter(self, algos):
+        # recompute lambda stats
+        lstats = {}
+        for weight in self.weights:
+            lstats[weight] = self.lstats[weight].filter(algos)
+        return ProcessedDataset(self.pstats.filter(algos),
+                                self.weights,
+                                lstats)

@@ -48,7 +48,7 @@ outfolder = "/home/diana/ca/processed/%s" % name
 ds = ProcessedDataset.load("%s/%s.yaml" % (outfolder, name))
 
 # filter out GREEDY2 and GREEDY3 algorithms
-ds = DatasetCreator.filter(ds, [x.name for x in Heuristic_Algorithm_Names \
+ds = ds.filter([x.name for x in Heuristic_Algorithm_Names \
                 if x != Heuristic_Algorithm_Names.GREEDY2 and \
                    x != Heuristic_Algorithm_Names.GREEDY3])
 
