@@ -195,6 +195,14 @@ class ProcessedStats():
             "costt": "%s.costt" % prefix
         }
 
+    def filter(self, algos):
+        return ProcessedStats(self.name + "_filtered",
+                              algos,
+                              self.welfares[algos].copy(),
+                              self.times[algos].copy(),
+                              self.costw[algos].copy(),
+                              self.costt[algos].copy())
+
 
 class LambdaStats():
 
