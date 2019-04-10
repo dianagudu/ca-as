@@ -31,6 +31,11 @@ class RawStatsLoader():
                 'util_stddev': np.float64,
                 'price_mean': np.float64}
 
+    __columns = ['instance', 'algorithm',
+                'time', 'welfare',
+                'ngoods', 'nwin', 'util_mean',
+                'util_stddev', 'price_mean']
+
     def __init__(self, infolder, name):
         self.__infolder = infolder
         self.__name = name
@@ -42,6 +47,10 @@ class RawStatsLoader():
     @property
     def schema(self):
         return self.__schema
+
+    @property
+    def columns(self):
+        return self.__columns
 
     @property
     def name(self):
@@ -75,7 +84,8 @@ class RawStatsLoader():
         allstats = pd.DataFrame()
         for stats_file in sorted(glob.glob(self.infolder + "/*")):
             stats = pd.read_csv(stats_file, header=None,
-                                names=self.schema.keys(), dtype=self.schema)
+                                names=self.columns, dtype=self.schema)
+            # use schema.keys() instead of self.columns for python>=3.6
             allstats = allstats.append(stats, ignore_index=True)
         return allstats
 

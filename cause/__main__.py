@@ -11,6 +11,7 @@ from cause.preprocessor import LambdaStats
 
 from cause.postprocessor import Postprocessor
 from cause.postprocessor import FeatsPostprocessor
+from cause.postprocessor import PredictionPostprocessor
 
 from cause.plotter import Plotter
 from cause.features import Features
@@ -43,7 +44,7 @@ outfolder = "/home/diana/ca/processed/%s" % name
 #FeatureExtractor.extract(instance_folder, name, outfolder)
 
 # load processed dataset
-ds = ProcessedDataset.load("%s/%s.yaml" % (outfolder, name))
+#ds = ProcessedDataset.load("%s/%s.yaml" % (outfolder, name))
 
 ## some postprocessing: breakdown
 #postp = Postprocessor(ds)
@@ -55,7 +56,7 @@ ds = ProcessedDataset.load("%s/%s.yaml" % (outfolder, name))
 #breakdown.plot(outfolder)
 
 # load processed features
-feats = Features.load("%s/%s_features.yaml" % (outfolder, name))
+#feats = Features.load("%s/%s_features.yaml" % (outfolder, name))
 
 ## postprocessing: feature importances
 #fpostp = FeatsPostprocessor(ds, feats)
@@ -68,6 +69,9 @@ feats = Features.load("%s/%s_features.yaml" % (outfolder, name))
 #MALAISEPredictor(lstats, feats).run(
 #    outfolder=outfolder, num_processes=8)
 
-for weight in ds.weights:
-    MALAISEPredictor(ds.lstats[weight], feats).run(
-        outfolder=outfolder, num_processes=6)
+#for weight in ds.weights:
+#    MALAISEPredictor(ds.lstats[weight], feats).run(
+#        outfolder=outfolder, num_processes=6)
+
+# load MALAISE results
+PredictionPostprocessor("%s/%s_stats" % (outfolder, name)).save(outfolder)
