@@ -5,8 +5,6 @@ import time
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import accuracy_score
 
-from cause.helper import Heuristic_Algorithm_Names
-
 
 class Predictor():
 
@@ -32,7 +30,7 @@ class ClassificationSet():
     @staticmethod
     def sanitize_and_init(features, winners, costs):
         # encode class labels to numbers
-        le = LabelEncoder().fit([x.name for x in Heuristic_Algorithm_Names])
+        le = LabelEncoder().fit(costs.columns.values)
         # merge on index
         merged_set = pd.merge(features, winners, left_index=True, right_index=True)
         merged_set = pd.merge(merged_set, costs, left_index=True, right_index=True)

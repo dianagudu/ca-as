@@ -3,7 +3,6 @@ import pandas as pd
 
 from sklearn.ensemble import ExtraTreesClassifier
 
-from cause.helper import Heuristic_Algorithm_Names
 from cause.plotter import Plotter
 from cause.predictor import ClassificationSet
 
