@@ -38,16 +38,14 @@ def main():
     weight = float(sys.argv[1])
     num_processes = int(sys.argv[2])
     feats = Features.load("%s/%s_features.yaml" % (outfolder, name))
-    #lstats = LambdaStats.load("%s/%s_lstats_%.1f" % (outfolder, name, weight), weight)
+    lstats = LambdaStats.load("%s/%s_lstats_%.1f" % (outfolder, name, weight), weight)
 
     # filter out algos from dataset and reprocess lstats
     algos = [x.name for x in Heuristic_Algorithm_Names \
                 if x != Heuristic_Algorithm_Names.GREEDY2 and \
                    x != Heuristic_Algorithm_Names.GREEDY3]
-    ds = ProcessedDataset.load("%s/%s.yaml" % (outfolder, name))
-    lstats = LambdaStatsPreprocessor(ds.pstats.filter(algos).process(weight))
-    MALAISEPredictor(lstats, feats).run(
-        outfolder=outfolder, num_processes=num_processes)
+    MALAISEPredictor(lstats.filter(algos), feats).run(
+        outfolder=outfolder + "_filtered", num_processes=num_processes)
 
 if __name__ == "__main__":
     main()
@@ -71,7 +69,7 @@ if __name__ == "__main__":
 #ds = ProcessedDataset.load("%s/%s.yaml" % (outfolder, name))
 
 # filter out GREEDY2 and GREEDY3 algorithms
-#ds = DatasetCreator.filter(ds, [x.name for x in Heuristic_Algorithm_Names \
+#ds = ds.filter([x.name for x in Heuristic_Algorithm_Names \
 #                if x != Heuristic_Algorithm_Names.GREEDY2 and \
 #                   x != Heuristic_Algorithm_Names.GREEDY3])
 

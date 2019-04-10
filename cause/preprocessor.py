@@ -195,18 +195,6 @@ class DatasetCreator():
         with open(metafile, "w") as f:
             yaml.dump(dobj, f)
 
-    @staticmethod
-    def filter(dataset, algos):
-        print(algos)
-        # new pstats
-        pstats = dataset.pstats.filter(algos)
-        # recompute lambda stats
-        lsp = LambdaStatsPreprocessor(pstats)
-        lstats = {}
-        for weight in dataset.weights:
-            lstats[weight] = lsp.process(weight)
-        return ProcessedDataset(pstats, dataset.weights, lstats)
-
 
 class FeatureExtractor():
 
