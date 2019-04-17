@@ -1,4 +1,6 @@
 from enum import Enum
+import numpy as np
+from scipy.special import lambertw
 
 
 class Algorithm_Names(Enum):
@@ -128,3 +130,90 @@ class Feature_Names(Enum):
     #critical_density_asks   = 76
     #critical_price_bids     = 77
     #critical_price_asks     = 78
+
+
+### functions used for fitting welfare and time to some curves
+
+def func_poly1(x, a):#, b):
+    return a * x# + b
+
+def func_poly2(x, a):#, b):
+    return a * x * x# + b
+
+def func_poly3(x, a):#, b):
+    return a * x * x * x# + b
+
+def func_poly321(x, a, b, c, d):
+    return a * x * x * x + b * x * x + c * x + d
+
+def func_sqrt(x, a):#, b):
+    return a * np.sqrt(x)# + b
+
+def func_nlogn(x, a):#, b):
+    return a * x * np.log(x)# + b
+
+def func_logn(x, a):#, b):
+    return a * np.log(x)# + b
+
+def func_n2logn(x, a):#, b):
+    return a * x * x * np.log(x)# + b
+
+def func_n3logn(x, a):#, b):
+    return a * x * x * x * np.log(x)# + b
+
+def func_npow(x, a, b):
+    return a * (x ** b)
+
+
+#### functions to extrapolate time and welfare
+
+def o_n2(time, ratio):
+    return time / (ratio ** 2)
+
+def o_n3(time, ratio):
+    return time / (ratio ** 3)
+
+def o_nlogn(time, ratio):
+    # if f(n)=nlogn=a measured => time on full instance is f(n/r)
+    # n=f^-1(f(n))=f^-1(a) => f(n/r)=f(f^-1(a)/r)
+    # f^-1(y) = y / lambertw(y)
+    time_inv = time / lambertw(time).real
+    return time_inv / ratio * np.log(time_inv / ratio)
+
+def o_n3logn(time, ratio):
+    time_inv = (3 * time / lambertw(3 * time).real) ** (1./3)
+    return (time_inv / ratio) ** 3 * np.log(time_inv / ratio)
+
+def stretch_time(row):
+    """extrapolates the time value of the full instance from the sample value
+
+    :param row: one row from all stats for running the algorithms on all instances
+    :returns: dataframe row where time column was stretched
+    """
+    if row.algorithm in ['GREEDY1', 'GREEDY2', 'GREEDY3', 'GREEDY1S']:
+       # extrapolate time value for algorithms with O(nlogn) time complexity
+        row.time = o_nlogn(row.time, row.ratio)
+    else:
+        # extrapolate time value for algorithms with O(n^2) time complexity
+        row.time = o_n2(row.time, row.ratio)
+            
+    return row.time
+
+def stretch_welfare(row):
+    """extrapolates the welfare value of the full instance from the sample value
+
+    :param row: one row from all stats for running the algorithms on all instances
+    :returns: dataframe row where welfare column was stretched
+    """
+    #if row.algorithm in ['HILL1']:
+    #    # extrapolate time value for algorithms with O(n^0.87) welfare complexity
+    #    row.welfare = row.welfare / (row.ratio ** 0.87)
+    #else:
+    #    if row.algorithm in ['HILL1S']:
+    #        # extrapolate time value for algorithms with O(n^0.94) welfare complexity
+    #        row.welfare = row.welfare / (row.ratio ** 0.94)
+    #    else:
+    #        # extrapolate welfare value for algorithms with O(n) welfare complexity
+    #        row.welfare = row.welfare / row.ratio
+    row.welfare = row.welfare / row.ratio
+    return row.welfare

@@ -180,3 +180,14 @@ class Plotter():
             print(ytickNames[i], bp['boxes'][i].get_xdata())
         for ws in bp['whiskers']:
             print(ws.get_xdata())
+
+    @staticmethod
+    def plot_data_over_ratios(data, ylabel, outfolder="/tmp"):
+        plt.figure()
+        for algo in data.columns:
+            plt.plot(data.index, data[algo], label=algo)
+        plt.xlabel('sampling ratio')
+        plt.ylabel(ylabel)
+        plt.legend(loc="best")
+        plt.savefig("%s/%s_over_ratio.png" % (outfolder, ylabel),
+                    bbox_inches='tight', dpi=300)

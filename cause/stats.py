@@ -53,6 +53,50 @@ class RawStats():
         pass
 
 
+class RawSampleStats():
+
+    def __init__(self, name, df, algos):
+        self.__name = name
+        self.__df = df
+        self.__algos = algos
+        self.__ratios = df.ratio.unique()
+
+    @property
+    def df(self):
+        return self.__df
+
+    @property
+    def name(self):
+        return self.__name
+
+    @property
+    def data(self):
+        return self.__df.values
+
+    @property
+    def columns(self):
+        return self.__df.columns
+
+    @property
+    def algos(self):
+        return self.__algos
+
+    @property
+    def ratios(self):
+        return self.__ratios
+
+    def get_welfares(self, ratio):
+        welfares = self.df[self.df.ratio == ratio].pivot(
+            index='instance', columns='algorithm', values='welfare')
+        # reorders columns
+        return welfares[self.algos]
+
+    def get_times(self, ratio):
+        times = self.df[self.df.ratio == ratio].pivot(
+            index='instance', columns='algorithm', values='time')
+        return times[self.algos]
+
+
 class RawStatsOptimal(RawStats):
 
     def __init__(self, name, df):
@@ -204,6 +248,90 @@ class ProcessedStats():
                               self.costt[algos].copy())
 
 
+class ProcessedSampleStats():
+
+    def __init__(self, name, algos, ratio, costw, costt,
+                 t_ovhd, costw_extra, costt_extra):
+        self.__name = name
+        self.__algos = algos
+        self.__ratio = ratio
+        self.__costw = costw
+        self.__costt = costt
+        self.__t_ovhd = t_ovhd
+        self.__costw_extra = costw_extra
+        self.__costt_extra = costt_extra
+
+    @property
+    def name(self):
+        return self.__name
+
+    @property
+    def algos(self):
+        return self.__algos
+
+    @property
+    def ratio(self):
+        return self.__ratio
+
+    @property
+    def costw(self):
+        return self.__costw
+
+    @property
+    def costt(self):
+        return self.__costt
+
+    @property
+    def t_ovhd(self):
+        return self.__t_ovhd
+
+    @property
+    def costw_extra(self):
+        return self.__costw_extra
+
+    @property
+    def costt_extra(self):
+        return self.__costt_extra
+
+    @staticmethod
+    def load(filename):
+        with open(filename, "r") as f:
+            dobj = yaml.load(f, Loader=yaml.BaseLoader)
+        return ProcessedSampleStats.from_dict(dobj)
+
+    def save(self, prefix):
+        info = self.to_dict(prefix)
+        with open("%s_psample_stats_%.2f.yaml" % (prefix, self.ratio), "w") as f:
+            yaml.dump(info, f)
+        self.costw.to_csv(info["costw"], float_format='%g')
+        self.costt.to_csv(info["costt"], float_format='%g')
+        self.t_ovhd.to_csv(info["t_ovhd"], float_format='%g')
+        self.costw_extra.to_csv(info["costw_extra"], float_format='%g')
+        self.costt_extra.to_csv(info["costt_extra"], float_format='%g')
+
+    @staticmethod
+    def from_dict(dobj):
+        costw = pd.read_csv(dobj["costw"], index_col='instance')
+        costt = pd.read_csv(dobj["costt"], index_col='instance')
+        t_ovhd = pd.read_csv(dobj["t_ovhd"], index_col='instance')
+        costw_extra = pd.read_csv(dobj["costw_extra"], index_col='instance')
+        costt_extra = pd.read_csv(dobj["costt_extra"], index_col='instance')
+        return ProcessedSampleStats(dobj["name"], dobj["algos"], dobj["ratio"],
+                                    costw, costt, t_ovhd, costw_extra, costt_extra)
+
+    def to_dict(self, prefix):
+        return {
+            "name": self.name,
+            "algos": self.algos,
+            "ratio": self.ratio,
+            "costw": "%s.costw.%.2f" % (prefix, self.ratio),
+            "costt": "%s.costt.%.2f" % (prefix, self.ratio),
+            "t_ovhd": "%s.t_ovhd.%.2f" % (prefix, self.ratio),
+            "costw_extra": "%s.costw_extra.%.2f" % (prefix, self.ratio),
+            "costt_extra": "%s.costt_extra.%.2f" % (prefix, self.ratio)
+        }
+
+
 class LambdaStats():
 
     def __init__(self, weight, costs, winners):
@@ -248,6 +376,37 @@ class LambdaStats():
         new_costs = self.costs[algos]
         new_winners = new_costs.idxmin(axis=1).to_frame().rename(columns={0: 'winner'})
         return LambdaStats(self.weight, new_costs, new_winners)
+
+
+class LambdaSampleStats():
+
+    def __init__(self, weight, winners, winners_extra):
+        self.__weight = weight
+        self.__winners = winners
+        self.__winners_extra = winners_extra
+
+    @property
+    def weight(self):
+        return self.__weight
+
+    @property
+    def winners(self):
+        return self.__winners
+
+    @property
+    def winners_extra(self):
+        return self.__winners_extra
+    
+    @staticmethod
+    def load(filename, weight):
+        winners = pd.read_csv("%s.winners" % filename, index_col='instance')
+        winners_extra = pd.read_csv("%s.winners_extra" % filename,
+                                    index_col='instance')
+        return LambdaSampleStats(weight, winners_extra, winners)
+
+    def save(self, filename):
+        self.winners.to_csv("%s.winners" % filename, float_format='%g')
+        self.winners_extra.to_csv("%s.winners_extra" % filename, float_format='%g')
 
 
 class ProcessedDataset():
@@ -302,3 +461,51 @@ class ProcessedDataset():
         return ProcessedDataset(self.pstats.filter(algos),
                                 self.weights,
                                 lstats)
+
+class ProcessedSamplesDataset():
+
+    def __init__(self, ratios, weights, sstats, lstats):
+        self.__ratios = ratios
+        self.__weights = weights
+        self.__sstats = sstats
+        self.__lstats = lstats
+
+    @property
+    def ratios(self):
+        return self.__ratios
+
+    @property
+    def weights(self):
+        return self.__weights
+
+    @property
+    def sstats(self):
+        return self.__sstats
+
+    @property
+    def lstats(self):
+        return self.__lstats
+
+    @staticmethod
+    def load(metafile):
+        with open(metafile, "r") as f:
+            dobj = yaml.load(f, Loader=yaml.BaseLoader)
+        return ProcessedSamplesDataset.from_dict(dobj)
+
+    @staticmethod
+    def from_dict(dobj):
+        weights = np.array(dobj["weights"], dtype='float64')
+        ratios = np.array(dobj["ratios"], dtype='float64')
+        sstats_file_prefix = dobj["sstats_file_prefix"]
+        lstats_file_prefix = dobj["lstats_file_prefix"]
+        lstats = {}
+        sstats = {}
+        for ratio in ratios:
+            sstats[ratio] = ProcessedSampleStats.load(
+                "%s%.2f.yaml" % (sstats_file_prefix, ratio))
+            lstats[ratio] = {}
+            for weight in weights:
+                lstats[ratio][weight] = LambdaSampleStats.load(
+                    "%s%.2f_%.1f" % (lstats_file_prefix, ratio, weight),
+                    weight)
+        return ProcessedSamplesDataset(ratios, weights, sstats, lstats)

@@ -4,10 +4,9 @@ import glob
 import yaml
 import math
 import scipy.stats.stats as st
+from scipy.optimize import curve_fit
 
-from cause.helper import Heuristic_Algorithm_Names
-from cause.helper import Stochastic_Algorithm_Names
-from cause.helper import Feature_Names
+from cause.helper import *
 
 from cause.stats import RawStats
 from cause.stats import RawStatsOptimal
@@ -15,8 +14,13 @@ from cause.stats import RawStatsRandom
 from cause.stats import ProcessedStats
 from cause.stats import LambdaStats
 from cause.stats import ProcessedDataset
+from cause.stats import RawSampleStats
+from cause.stats import ProcessedSampleStats
+from cause.stats import LambdaSampleStats
 
 from cause.features import Features
+
+from cause.plotter import Plotter
 
 from cage.auctionset import AuctionSet
 
@@ -91,6 +95,62 @@ class RawStatsLoader():
         return allstats
 
 
+class RawSampleStatsLoader():
+
+    __schema = {'ratio': np.float64,
+                'instance': np.object_,
+                'algorithm': np.object_,
+                'time': np.float64,
+                'welfare': np.float64,
+                'ngoods': np.int64,
+                'nwin': np.int64,
+                'util_mean': np.float64,
+                'util_stddev': np.float64,
+                'price_mean': np.float64}
+
+    __columns = ['ratio', 'instance', 'algorithm',
+                'time', 'welfare',
+                'ngoods', 'nwin', 'util_mean',
+                'util_stddev', 'price_mean']
+
+    def __init__(self, infolder, name):
+        self.__infolder = infolder
+        self.__name = name
+
+    @property
+    def infolder(self):
+        return self.__infolder
+
+    @property
+    def schema(self):
+        return self.__schema
+
+    @property
+    def columns(self):
+        return self.__columns
+
+    @property
+    def name(self):
+        return self.__name
+
+    def load(self):
+        allstats = self.__load()
+        # average over multiple runs when needed
+        allstats = allstats.groupby(
+            ['ratio', 'instance', 'algorithm']).mean().reset_index()
+        return RawSampleStats(self.name, allstats,
+                              [x.name for x in Heuristic_Algorithm_Names])
+
+    def __load(self):
+        allstats = pd.DataFrame()
+        for stats_file in sorted(glob.glob(self.infolder + "/*")):
+            stats = pd.read_csv(stats_file, header=None,
+                                names=self.columns, dtype=self.schema)
+            # use schema.keys() instead of self.columns for python>=3.6
+            allstats = allstats.append(stats, ignore_index=True)
+        return allstats
+
+
 class StatsPreprocessor():
 
     @staticmethod
@@ -147,6 +207,81 @@ class StatsPreprocessor():
         return data
 
 
+class SampleStatsPreprocessor():
+
+    @staticmethod
+    def process(rawsamplestats, ratio):
+        psstats = pd.DataFrame(
+            rawsamplestats.df[rawsamplestats.df.ratio == ratio]
+            .groupby('instance')
+            .apply(SampleStatsPreprocessor.__compute_costs_and_extra))
+
+        costt = psstats.pivot(
+            index='instance', columns='algorithm', values='costt')
+        costw = psstats.pivot(
+            index='instance', columns='algorithm', values='costw')
+        t_ovhd = psstats.pivot(
+            index='instance', columns='algorithm', values='t_ovhd')
+        costt_extra = psstats.pivot(
+            index='instance', columns='algorithm', values='costt_extra')
+        costw_extra = psstats.pivot(
+            index='instance', columns='algorithm', values='costw_extra')
+
+        return ProcessedSampleStats(rawsamplestats.name,
+                                    rawsamplestats.algos,
+                                    ratio,
+                                    costw[rawsamplestats.algos],
+                                    costt[rawsamplestats.algos],
+                                    t_ovhd[rawsamplestats.algos],
+                                    costw_extra[rawsamplestats.algos],
+                                    costt_extra[rawsamplestats.algos])
+
+    @staticmethod
+    def __compute_costs_and_extra(data):
+        # first, just compute cost of instance
+        wmin = data.welfare.min()
+        wmax = data.welfare.max()
+        tmin = data.time.min()
+        tmax = data.time.max()
+        if wmax - wmin == 0:
+            data.eval('costw = 0', inplace=True)
+        else:
+            data.eval(
+                'costw = (@wmax - welfare) / (@wmax - @wmin)', inplace=True)
+        if tmax - tmin == 0:
+            data.eval('costt = 0', inplace=True)
+        else:
+            data.eval('costt = (time - @tmin) / (@tmax - @tmin)', inplace=True)
+        
+        # compute time overhead
+        t_ovhd = data.time.sum()
+        data.eval('t_ovhd = @t_ovhd', inplace=True)
+
+        # compute stretched welfare
+        data['welfare_extra'] = data.apply(stretch_welfare, axis=1)
+        # compute stretched time
+        data['time_extra'] = data.apply(stretch_time, axis=1)
+        # compute predicted costs: costw_extra, costt_extra
+        wmin_extra = data.welfare_extra.min()
+        wmax_extra = data.welfare_extra.max()
+        tmin_extra = data.time_extra.min()
+        tmax_extra = data.time_extra.max()
+        if wmax - wmin == 0:
+            data.eval('costw_extra = 0', inplace=True)
+        else:
+            data.eval(
+                'costw_extra = (@wmax_extra - welfare_extra) / (@wmax_extra - @wmin_extra)',
+                inplace=True)
+        if tmax - tmin == 0:
+            data.eval('costt_extra = 0', inplace=True)
+        else:
+            data.eval(
+                'costt_extra = (time_extra - @tmin_extra) / (@tmax_extra - @tmin_extra)',
+                inplace=True)
+        
+        return data
+
+
 class LambdaStatsPreprocessor():
 
     def __init__(self, pstats):
@@ -162,6 +297,26 @@ class LambdaStatsPreprocessor():
         winners = costs.idxmin(axis=1).to_frame().rename(columns={0: 'winner'})
         return LambdaStats(weight, costs, winners)
 
+
+class LambdaSampleStatsPreprocessor():
+
+    def __init__(self, sstats):
+        self.__sstats = sstats
+
+    @property
+    def sstats(self):
+        return self.__sstats
+
+    def process(self, weight):
+        costs = ((weight * self.sstats.costw) ** 2 +
+                ((1 - weight) * self.sstats.costt) ** 2) ** 0.5
+        winners = costs.idxmin(axis=1).to_frame().rename(columns={0: 'winner'})
+        costs_extra = ((weight * self.sstats.costw_extra) ** 2 +
+                      ((1 - weight) * self.sstats.costt_extra) ** 2) ** 0.5
+        winners_extra = costs_extra.idxmin(axis=1)\
+                                   .to_frame()\
+                                   .rename(columns={0: 'winner'})
+        return LambdaSampleStats(weight, winners, winners_extra)
 
 class DatasetCreator():
 
@@ -189,6 +344,49 @@ class DatasetCreator():
         dobj = {
             "pstats_file": pstats_file,
             "weights": weights.tolist(),
+            "lstats_file_prefix": lstats_file_prefix
+        }
+
+        with open(metafile, "w") as f:
+            yaml.dump(dobj, f)
+
+
+class SamplesDatasetCreator():
+
+    @staticmethod
+    def create(weights, infolder, outfolder, name):
+        # filenames
+        prefix = "%s/%s" % (outfolder, name)
+        sstats_file_prefix = "%s_psample_stats_" % prefix
+        lstats_file_prefix = "%s_lstats_" % prefix
+        metafile = "%s_samples.yaml" % prefix
+
+        # load raw stats
+        rawsamplestats = RawSampleStatsLoader(infolder, name).load()
+        ratios = rawsamplestats.ratios
+        #ratios = np.array([.05, .1, .15, .2, .25, .3, .35,
+        #                   .4, .45, .5, .55, .6, .65, .7,
+        #                   .75, .8, .85, .9, .95])
+
+        # process and save raw stats
+        for ratio in ratios:
+            sstats = SampleStatsPreprocessor.process(
+                rawsamplestats, ratio)
+            sstats.save(prefix)
+            # process and save lambda stats per ratio
+            #sstats = ProcessedSampleStats.load(
+            #    "%s%.2f.yaml" % (sstats_file_prefix, ratio))
+            lssp = LambdaSampleStatsPreprocessor(sstats)
+            for weight in weights:
+                lstats = lssp.process(weight)
+                lstats.save(
+                    "%s%.2f_%.1f" % (lstats_file_prefix, ratio, weight))
+
+         # save dataset metafile
+        dobj = {
+            "weights": weights.tolist(),
+            "ratios": ratios.tolist(),
+            "sstats_file_prefix": sstats_file_prefix,
             "lstats_file_prefix": lstats_file_prefix
         }
 
@@ -397,3 +595,59 @@ class FeatureExtractor():
         with open(features_file, "a") as f:
             fpi.to_csv(f, header=False, float_format='%g')
             f.close()
+
+
+class SampleStatsFit():
+
+    @staticmethod
+    def fit_welfare(raw_sample_stats):
+        sample_welfares = pd.DataFrame()
+        for ratio in raw_sample_stats.ratios:
+            sample_welfares = sample_welfares.append(
+                raw_sample_stats.get_welfares(ratio).agg("mean"),
+                ignore_index=True)
+        sample_welfares = sample_welfares.set_index(raw_sample_stats.ratios)
+        Plotter.plot_data_over_ratios(sample_welfares, "welfare")
+
+        xdata = 10000 * sample_welfares.index
+        for algo in sample_welfares.columns:
+            print('==== %s ====' % algo)
+            ydata = sample_welfares[algo]
+            popt, pcov = curve_fit(func_poly1, xdata, ydata, bounds=(0, np.inf))
+            print("welfare lin:", popt, np.sqrt(np.diag(pcov))*100./popt, "%")
+            popt, pcov = curve_fit(func_sqrt, xdata, ydata, bounds=(0, np.inf))
+            print("welfare sqrt:", popt, np.sqrt(np.diag(pcov))*100./popt, "%")
+            popt, pcov = curve_fit(func_logn, xdata, ydata, bounds=(0, np.inf))
+            print("welfare logn:", popt, np.sqrt(np.diag(pcov))*100./popt, "%")
+            popt, pcov = curve_fit(func_poly2, xdata, ydata, bounds=(0, np.inf))
+            print("welfare n2:", popt, np.sqrt(np.diag(pcov))*100./popt, "%")
+            popt, pcov = curve_fit(func_npow, xdata, ydata, bounds=(0, np.inf))
+            print("welfare a*n^b:", popt, np.sqrt(np.diag(pcov))*100./popt, "%")
+
+    @staticmethod
+    def fit_time(raw_sample_stats):
+        sample_times = pd.DataFrame()
+        for ratio in raw_sample_stats.ratios:
+            sample_times = sample_times.append(
+                raw_sample_stats.get_times(ratio).agg("mean"),
+                ignore_index=True)
+        sample_times = sample_times.set_index(raw_sample_stats.ratios)
+        Plotter.plot_data_over_ratios(sample_times, "time")
+
+        xdata = 10000 * sample_times.index
+        for algo in sample_times.columns:
+            print('==== %s ====' % algo)
+            ydata = sample_times[algo]
+            popt, pcov = curve_fit(func_nlogn, xdata, ydata, bounds=(0, np.inf))
+            print("time nlogn:",  popt, np.sqrt(np.diag(pcov))*100./popt, "%")
+            popt, pcov = curve_fit(func_poly2, xdata, ydata, bounds=(0, np.inf))
+            print("time n2:",  popt, np.sqrt(np.diag(pcov))*100./popt, "%")
+            popt, pcov = curve_fit(func_poly3, xdata, ydata, bounds=(0, np.inf))
+            print("time n3:",  popt, np.sqrt(np.diag(pcov))*100./popt, "%")
+            popt, pcov = curve_fit(func_poly321, xdata, ydata, bounds=(0, np.inf))
+            print("time n321:",  popt, np.sqrt(np.diag(pcov))*100./popt, "%")
+            popt, pcov = curve_fit(func_n3logn, xdata, ydata, bounds=(0, np.inf))
+            print("time n3logn:",  popt, np.sqrt(np.diag(pcov))*100./popt, "%")
+            popt, pcov = curve_fit(func_n2logn, xdata, ydata, bounds=(0, np.inf))
+            print("time n2logn:",  popt, np.sqrt(np.diag(pcov))*100./popt, "%")
+

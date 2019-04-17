@@ -1,13 +1,20 @@
 import numpy as np
+import pickle
 
 from cause.stats import ProcessedDataset
 from cause.stats import ProcessedStats
+from cause.stats import ProcessedSamplesDataset
 
 from cause.preprocessor import RawStatsLoader
 from cause.preprocessor import DatasetCreator
 from cause.preprocessor import StatsPreprocessor
 from cause.preprocessor import FeatureExtractor
 from cause.preprocessor import LambdaStats
+
+from cause.preprocessor import RawSampleStatsLoader
+from cause.preprocessor import SampleStatsPreprocessor
+from cause.preprocessor import SamplesDatasetCreator
+from cause.preprocessor import SampleStatsFit
 
 from cause.postprocessor import Postprocessor
 from cause.postprocessor import FeatsPostprocessor
@@ -19,14 +26,15 @@ from cause.malaise import MALAISEPredictor
 from cause.helper import Heuristic_Algorithm_Names
 
 #name = "ca-compare-3dims"
-name = "malaise"
+#name = "malaise"
+name = "praise"
 
 #infolder = "/tmp/stats"   # testing!
 #instance_folder = "/tmp/instances"   # testing!
 #outfolder = "/tmp/out"   # testing!
 
-#infolder = "/home/diana/ca/stats/%s" % name
-#instance_folder = "/home/diana/ca/datasets/%s" % name
+infolder = "/home/diana/ca/stats/%s" % name
+instance_folder = "/home/diana/ca/datasets/%s" % name
 outfolder = "/home/diana/ca/processed/%s" % name
 
 # 1st workflow: load stats for alg comparison (incl optimal) and plot avg case
@@ -37,7 +45,7 @@ outfolder = "/home/diana/ca/processed/%s" % name
 
 # 3rd workflow: preprocess dataset (stats for heuristic algos and features)
 #               run prediction using ML, plot and save results
-#weights = np.array([0., .1, .2, .3, .4, .5, .6, .7, .8, .9, 1.])
+weights = np.array([0., .1, .2, .3, .4, .5, .6, .7, .8, .9, 1.])
 #weights = np.array([0., .5, 1.]) # testing!
 #DatasetCreator.create(weights, infolder, outfolder, name)
 
@@ -45,12 +53,13 @@ outfolder = "/home/diana/ca/processed/%s" % name
 #FeatureExtractor.extract(instance_folder, name, outfolder)
 
 # load processed dataset
-ds = ProcessedDataset.load("%s/%s.yaml" % (outfolder, name))
+#ds = ProcessedDataset.load("%s/%s.yaml" % (outfolder, name))
 
 # filter out GREEDY2 and GREEDY3 algorithms
-ds = ds.filter([x.name for x in Heuristic_Algorithm_Names \
-                if x != Heuristic_Algorithm_Names.GREEDY2 and \
-                   x != Heuristic_Algorithm_Names.GREEDY3])
+#algos = [x.name for x in Heuristic_Algorithm_Names \
+#               if x != Heuristic_Algorithm_Names.GREEDY2 and \
+#                  x != Heuristic_Algorithm_Names.GREEDY3]
+#ds = ds.filter(algos)
 
 ## some postprocessing: breakdown
 #postp = Postprocessor(ds)
@@ -67,13 +76,17 @@ ds = ds.filter([x.name for x in Heuristic_Algorithm_Names \
 ## postprocessing: feature importances
 #fpostp = FeatsPostprocessor(ds, feats)
 #fpostp.save_feature_importances(outfolder)
+#fpostp.save_feature_importances_by_weight(outfolder, 0.0)
+#fpostp.save_feature_importances_by_weight(outfolder, 0.1)
+#fpostp.save_feature_importances_by_weight(outfolder, 0.5)
+#fpostp.save_feature_importances_by_weight(outfolder, 1.0)
 ## plot features as heatmap
 #feats.plot(outfolder)
 
 #weight = 0.5
-#lstats = LambdaStats.load("%s/%s_lstats_%.1f" % (outfolder, name, weight), weight)
+#lstats = LambdaStats.load("%s/%s_lstats_%.1f" % (outfolder, name, weight), weight).filter(algos)
 #MALAISEPredictor(lstats, feats).run(
-#    outfolder=outfolder, num_processes=8)
+#    outfolder=outfolder+"_filtered", num_processes=8)
 
 #for weight in ds.weights:
 #    MALAISEPredictor(ds.lstats[weight], feats).run(
@@ -82,3 +95,23 @@ ds = ds.filter([x.name for x in Heuristic_Algorithm_Names \
 # load MALAISE results
 #PredictionPostprocessor("%s/%s_stats" % (outfolder, name)).save(outfolder)
 
+### test test ###
+# load pickled model and print out
+#weight = 0.0
+#pickled_model = "%s/%s_cls_model_%.1f" % (outfolder, name, weight)
+#cls_ml = pickle.load(open(pickled_model, "rb" ))
+#cls_ml.show_models()
+#cls_ml.get_params()
+
+
+### PRAISE stuff
+#allstats = RawSampleStatsLoader(infolder, name).load()
+#SampleStatsFit.fit_welfare(allstats)
+#SampleStatsFit.fit_time(allstats)
+#SamplesDatasetCreator.create(weights, infolder, outfolder, name)
+sds = ProcessedSamplesDataset.load("%s/%s_samples.yaml" % (outfolder, name))
+
+ratio = 0.25
+weight = 0.5
+print(sds.ratios)
+print(sds.lstats[ratio][weight].winners_extra)
