@@ -80,6 +80,29 @@ class FeatsPostprocessor(Postprocessor):
     def features(self):
         return self.__features
 
+    def save_feature_importances_by_weight(self, outfolder, weight):
+        lstats = self.dataset.lstats[weight]
+        clsset = ClassificationSet.sanitize_and_init(
+            self.features.features, lstats.winners, lstats.costs)
+        clf = ExtraTreesClassifier()
+        clf = clf.fit(clsset.X, clsset.y.ravel())
+        importances = pd.DataFrame(data=clf.feature_importances_.reshape(
+                                       (1, len(clf.feature_importances_))
+                                    ),
+                                   columns=self.features.features.columns)
+        # sort feature names by average importance
+        sorted_feature_names = [name for _,name in 
+                                sorted(zip(importances.mean(axis=0), self.features.features.columns))
+                                ][::-1]
+        importances = importances[sorted_feature_names]
+        feats = pd.DataFrame(columns=['order', 'value', 'name'])
+        feats['order'] = np.arange(len(self.features.features.columns))[::-1]
+        feats['value'] = np.transpose(importances.values)
+        feats['name'] = sorted_feature_names
+        feats.to_csv("%s/feats_%.1f" % (outfolder, weight),
+                     sep='&', index=False, line_terminator='\\\\\n')
+
+
     def save_feature_importances(self, outfolder):
         # compute feature importances for each weight
         importances = np.empty(shape=(0,0))
