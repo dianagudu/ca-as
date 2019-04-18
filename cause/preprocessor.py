@@ -600,14 +600,18 @@ class FeatureExtractor():
 class SampleStatsFit():
 
     @staticmethod
-    def fit_welfare(raw_sample_stats):
+    def fit_welfare(raw_sample_stats, outfolder="/tmp"):
         sample_welfares = pd.DataFrame()
         for ratio in raw_sample_stats.ratios:
             sample_welfares = sample_welfares.append(
                 raw_sample_stats.get_welfares(ratio).agg("mean"),
                 ignore_index=True)
         sample_welfares = sample_welfares.set_index(raw_sample_stats.ratios)
-        Plotter.plot_data_over_ratios(sample_welfares, "welfare")
+        # save xdata, ydata to file
+        sample_welfares.to_csv("%s/welfares_over_ratio" % outfolder,
+                               sep='&', line_terminator='\\\\\n')
+        # plot welfare over ratios
+        Plotter.plot_data_over_ratios(sample_welfares, "welfare", outfolder)
 
         xdata = 10000 * sample_welfares.index
         for algo in sample_welfares.columns:
@@ -625,14 +629,18 @@ class SampleStatsFit():
             print("welfare a*n^b:", popt, np.sqrt(np.diag(pcov))*100./popt, "%")
 
     @staticmethod
-    def fit_time(raw_sample_stats):
+    def fit_time(raw_sample_stats, outfolder="/tmp"):
         sample_times = pd.DataFrame()
         for ratio in raw_sample_stats.ratios:
             sample_times = sample_times.append(
                 raw_sample_stats.get_times(ratio).agg("mean"),
                 ignore_index=True)
         sample_times = sample_times.set_index(raw_sample_stats.ratios)
-        Plotter.plot_data_over_ratios(sample_times, "time")
+        # save xdata, ydata to file
+        sample_times.to_csv("%s/times_over_ratio" % outfolder,
+                            sep='&', line_terminator='\\\\\n')
+        # plot welfare over ratios
+        Plotter.plot_data_over_ratios(sample_times, "time", outfolder)
 
         xdata = 10000 * sample_times.index
         for algo in sample_times.columns:
