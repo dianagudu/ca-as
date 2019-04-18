@@ -180,9 +180,10 @@ def o_nlogn(time, ratio):
     time_inv = time / lambertw(time).real
     return time_inv / ratio * np.log(time_inv / ratio)
 
-def o_n3logn(time, ratio):
-    time_inv = (3 * time / lambertw(3 * time).real) ** (1./3)
-    return (time_inv / ratio) ** 3 * np.log(time_inv / ratio)
+def o_n2logn(time, ratio):
+    time_inv = (2 * time / lambertw(2 * time).real) ** (1./2)
+    return (time_inv / ratio) ** 2 * np.log(time_inv / ratio)
+
 
 def stretch_time(row):
     """extrapolates the time value of the full instance from the sample value
@@ -190,12 +191,18 @@ def stretch_time(row):
     :param row: one row from all stats for running the algorithms on all instances
     :returns: dataframe row where time column was stretched
     """
-    if row.algorithm in ['GREEDY1', 'GREEDY2', 'GREEDY3', 'GREEDY1S']:
+    if row.algorithm in ['GREEDY1', 'GREEDY2', 'GREEDY3', 'GREEDY1S',
+                         'SA', 'SAS']:
        # extrapolate time value for algorithms with O(nlogn) time complexity
         row.time = o_nlogn(row.time, row.ratio)
     else:
-        # extrapolate time value for algorithms with O(n^2) time complexity
-        row.time = o_n2(row.time, row.ratio)
+        if row.algorithm in ['HILL1', 'HILL1S']:
+            # extrapolate time value for algorithms with O(n^2logn) time complexity
+            row.time = o_n2logn(row.time, row.ratio)
+        else:
+            # HILL2, HILL2S, CASANOVA, CASANOVAS
+            # extrapolate time value for algorithms with O(n^2) time complexity
+            row.time = o_n2(row.time, row.ratio)
             
     return row.time
 
