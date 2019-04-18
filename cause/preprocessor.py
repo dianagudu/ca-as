@@ -211,6 +211,65 @@ class SampleStatsPreprocessor():
 
     @staticmethod
     def process(rawsamplestats, ratio):
+        welfares = rawsamplestats.get_welfares(ratio)
+        times = rawsamplestats.get_times(ratio)
+
+        wmin = welfares.min(axis=1)
+        wmax = welfares.max(axis=1)
+        ## todo : cost of welfare is wmax - w/...
+        costw = (-welfares).add(wmax, axis='index').div(
+            wmax - wmin, axis='index').fillna(0.)
+
+        tmin = times.min(axis=1)
+        tmax = times.max(axis=1)
+        costt = times.sub(tmin, axis='index').div(
+            tmax - tmin, axis='index').fillna(0.)
+
+        t_ovhd = pd.DataFrame(times.max(axis=1))
+
+        # compute stretched welfare
+        data = rawsamplestats.df[rawsamplestats.df.ratio == ratio][[
+            "ratio", "instance", "algorithm", "welfare", "time"]]
+        #data['welfare_extra'] = data.apply(stretch_welfare, axis=1)
+        data.eval("welfare_extra = welfare / ratio", inplace=True)
+
+        # compute stretched time
+        data['time_extra'] = data.apply(stretch_time, axis=1)
+
+        # get extrapolated welfares and times as matrix
+        # rows=instances, columns=algorithms
+        welfares_extra = data.pivot(
+            index='instance', columns='algorithm', values='welfare_extra')
+        times_extra = data.pivot(
+            index='instance', columns='algorithm', values='time_extra')
+        # reorder columns
+        welfares_extra = welfares_extra[rawsamplestats.algos]
+        times_extra = times_extra[rawsamplestats.algos]
+
+        # compute predicted costs:
+        # costs with predicted (extrapolated) values
+        wmin_extra = welfares_extra.min(axis=1)
+        wmax_extra = welfares_extra.max(axis=1)
+        costw_extra = (-welfares_extra).add(wmax_extra, axis='index').div(
+            wmax_extra - wmin_extra, axis='index').fillna(0.)
+
+        tmin_extra = times_extra.min(axis=1)
+        tmax_extra = times_extra.max(axis=1)
+        costt_extra = times_extra.sub(tmin_extra, axis='index').div(
+            tmax_extra - tmin_extra, axis='index').fillna(0.)
+
+        # create and return processed sample stats
+        return ProcessedSampleStats(rawsamplestats.name,
+                                    rawsamplestats.algos,
+                                    ratio,
+                                    costw,
+                                    costt,
+                                    t_ovhd,
+                                    costw_extra,
+                                    costt_extra)        
+
+    @staticmethod
+    def process_old(rawsamplestats, ratio):
         psstats = pd.DataFrame(
             rawsamplestats.df[rawsamplestats.df.ratio == ratio]
             .groupby('instance')

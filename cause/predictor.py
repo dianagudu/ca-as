@@ -85,6 +85,12 @@ class Evaluator():
                 costs[i, y_pred[i]] - costs[i, y_true[i]]
             ) ** 2 for i in range(len(y_true))])
 
+    @staticmethod
+    def mre_ovhd(y_true, y_pred, costs, costs_ovhd):
+        return np.mean([(
+                costs_ovhd[i, y_pred[i]] - costs[i, y_true[i]]
+            ) ** 2 for i in range(len(y_true))])
+
 
 class GenericClassifier():
 

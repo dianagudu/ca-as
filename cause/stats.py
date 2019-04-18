@@ -316,14 +316,15 @@ class ProcessedSampleStats():
         t_ovhd = pd.read_csv(dobj["t_ovhd"], index_col='instance')
         costw_extra = pd.read_csv(dobj["costw_extra"], index_col='instance')
         costt_extra = pd.read_csv(dobj["costt_extra"], index_col='instance')
-        return ProcessedSampleStats(dobj["name"], dobj["algos"], dobj["ratio"],
+        return ProcessedSampleStats(dobj["name"], dobj["algos"], 
+                                    float(dobj["ratio"]),
                                     costw, costt, t_ovhd, costw_extra, costt_extra)
 
     def to_dict(self, prefix):
         return {
             "name": self.name,
             "algos": self.algos,
-            "ratio": self.ratio,
+            "ratio": float(self.ratio),
             "costw": "%s.costw.%.2f" % (prefix, self.ratio),
             "costt": "%s.costt.%.2f" % (prefix, self.ratio),
             "t_ovhd": "%s.t_ovhd.%.2f" % (prefix, self.ratio),

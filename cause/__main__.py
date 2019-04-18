@@ -25,6 +25,9 @@ from cause.features import Features
 from cause.malaise import MALAISEPredictor
 from cause.helper import Heuristic_Algorithm_Names
 
+from cause.praise import PRAISEPredictor
+
+
 #name = "ca-compare-3dims"
 #name = "malaise"
 name = "praise"
@@ -105,13 +108,19 @@ weights = np.array([0., .1, .2, .3, .4, .5, .6, .7, .8, .9, 1.])
 
 
 ### PRAISE stuff
-#allstats = RawSampleStatsLoader(infolder, name).load()
-#SampleStatsFit.fit_welfare(allstats)
-#SampleStatsFit.fit_time(allstats)
-#SamplesDatasetCreator.create(weights, infolder, outfolder, name)
+allstats = RawSampleStatsLoader(infolder, name).load()
+SampleStatsFit.fit_welfare(allstats)
+SampleStatsFit.fit_time(allstats)
+SamplesDatasetCreator.create(weights, infolder, outfolder, name)
 sds = ProcessedSamplesDataset.load("%s/%s_samples.yaml" % (outfolder, name))
 
-ratio = 0.25
-weight = 0.5
-print(sds.ratios)
-print(sds.lstats[ratio][weight].winners_extra)
+## load full instance dataset
+fds = ProcessedDataset.load("%s/%s.yaml" % (outfolder, name))
+
+for weight in fds.weights:
+    for ratio in sds.ratios:
+        PRAISEPredictor(
+            fds.pstats, fds.lstats[weight],
+            sds.sstats[ratio], sds.lstats[ratio][weight]
+            ).run(
+            outfolder=outfolder)
