@@ -1,3 +1,4 @@
+import numpy as np
 import csv
 from sklearn.preprocessing import LabelEncoder
 
@@ -38,8 +39,10 @@ class PRAISEPredictor(Predictor):
         return self.__lstats_sample
 
     def run(self, outfolder="/tmp"):
-        stats_file = "%s/%s_stats_%.1f_%.2f" % (
-            outfolder, self.name, self.weight, self.ratio)
+        #stats_file = "%s/%s_stats_%.1f_%.2f" % (
+        #    outfolder, self.name, self.weight, self.ratio)
+
+        stats_file = "%s/%s_stats" % (outfolder, self.name)
 
         # only instances that are in the sample stats
         instances = self.lstats_sample.winners.index.tolist()
@@ -67,10 +70,36 @@ class PRAISEPredictor(Predictor):
         acc_extra = Evaluator.accuracy(y_true, y_pred_extra)
         mse_extra = Evaluator.mre_ovhd(y_true, y_pred_extra, costs, costs_ovhd)
 
-        stats = ["PRAISE", self.weight, self.ratio,
-                 acc, mse, acc_extra, mse_extra]
+        stats = ["PRAISE", self.weight, self.ratio, acc, mse]
+        stats_extra = ["PRAISE_EXTRA", self.weight,
+            self.ratio, acc_extra, mse_extra]
+
         with open(stats_file, "a") as f:
             csv.writer(f).writerow(stats)
+            csv.writer(f).writerow(stats_extra)
+
+        # random selection
+        for _ in range(100):
+            y_rand = np.random.choice(le.transform(le.classes_),
+                                    y_true.shape[0])
+            acc_rand = Evaluator.accuracy(y_true, y_rand)
+            mre_rand = Evaluator.mre(y_true, y_rand, costs)
+            stats_rand = ["RANDOM", self.weight, self.ratio,
+                acc_rand, mre_rand]
+            with open(stats_file, "a") as f:
+                csv.writer(f).writerow(stats_rand)
+
+        # best algo selection
+        u, indices = np.unique(y_true, return_inverse=True)
+        best_algo = u[np.argmax(np.bincount(indices))]
+        y_best = np.full(y_true.shape[0], best_algo, dtype=int)
+        acc_best = Evaluator.accuracy(y_true, y_best)
+        mre_best = Evaluator.mre(y_true, y_best, costs)
+        stats_best = ["BEST", self.weight, self.ratio,
+            acc_best, mre_best]
+        with open(stats_file, "a") as f:
+            csv.writer(f).writerow(stats_best)
+
 
     @staticmethod
     def __compute_costt_ovhd(times, t_ovhd):

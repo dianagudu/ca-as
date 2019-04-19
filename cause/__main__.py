@@ -18,7 +18,8 @@ from cause.preprocessor import SampleStatsFit
 
 from cause.postprocessor import Postprocessor
 from cause.postprocessor import FeatsPostprocessor
-from cause.postprocessor import PredictionPostprocessor
+from cause.postprocessor import MALAISEPostprocessor
+from cause.postprocessor import PRAISEPostprocessor
 
 from cause.plotter import Plotter
 from cause.features import Features
@@ -96,7 +97,7 @@ weights = np.array([0., .1, .2, .3, .4, .5, .6, .7, .8, .9, 1.])
 #        outfolder=outfolder, num_processes=6)
 
 # load MALAISE results
-#PredictionPostprocessor("%s/%s_stats" % (outfolder, name)).save(outfolder)
+#MALAISEPostprocessor("%s/%s_stats" % (outfolder, name)).save(outfolder)
 
 ### test test ###
 # load pickled model and print out
@@ -124,3 +125,7 @@ for weight in fds.weights:
             sds.sstats[ratio], sds.lstats[ratio][weight]
             ).run(
             outfolder=outfolder)
+
+stats_file = "%s/%s_stats" % (outfolder, name)
+ppp = PRAISEPostprocessor(stats_file)
+ppp.save()
