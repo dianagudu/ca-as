@@ -1,4 +1,5 @@
 import numpy as np
+import pickle
 
 from cause.stats import ProcessedDataset
 from cause.stats import ProcessedStats
@@ -33,7 +34,7 @@ instance_folder = "/home/deedee/ca/datasets/" + name
 outfolder = "/home/deedee/ca/processed/" + name
 
 
-def main():
+def old_main():
     # get weight and stats file name
     weight = float(sys.argv[1])
     num_processes = int(sys.argv[2])
@@ -46,6 +47,15 @@ def main():
                    x != Heuristic_Algorithm_Names.GREEDY3]
     MALAISEPredictor(lstats.filter(algos), feats).run(
         outfolder=outfolder + "_filtered", num_processes=num_processes)
+
+def main():
+    ### test test ###
+    # load pickled model and print out
+    weight = 1.0
+    pickled_model = "%s/%s_cls_model_%.1f" % (outfolder, name, weight)
+    cls_ml = pickle.load(open(pickled_model, "rb" ))
+    print(cls_ml.show_models())
+    print(cls_ml.get_params())
 
 if __name__ == "__main__":
     main()
