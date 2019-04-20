@@ -44,13 +44,10 @@ class PRAISEPredictor(Predictor):
 
         stats_file = "%s/%s_stats" % (outfolder, self.name)
 
-        # only instances that are in the sample stats
-        instances = self.lstats_sample.winners.index.tolist()
-
-        y_true = self.lstats.winners.loc[instances].values
+        y_true = self.lstats.winners.values
         y_pred = self.lstats_sample.winners.values
         y_pred_extra = self.lstats_sample.winners_extra.values
-        costs = self.lstats.costs.loc[instances].values
+        costs = self.lstats.costs.values
         
         # encode class labels to numbers
         le = LabelEncoder().fit(self.lstats.costs.columns.values)
@@ -60,9 +57,9 @@ class PRAISEPredictor(Predictor):
 
         # compute costs with overhead
         costt_ovhd = PRAISEPredictor.__compute_costt_ovhd(
-            self.pstats.times.loc[instances], self.sstats.t_ovhd)
-        costs_ovhd = ((self.weight * self.pstats.costw.loc[instances]) ** 2 +
-                ((1 - self.weight) * costt_ovhd) ** 2) ** 0.5
+            self.pstats.times, self.sstats.t_ovhd)
+        costs_ovhd = ((self.weight * self.pstats.costw) ** 2 +
+                ((1 - self.weight) * (self.pstats.costt + costt_ovhd)) ** 2) ** 0.5
         costs_ovhd = costs_ovhd.values
 
         acc = Evaluator.accuracy(y_true, y_pred)
@@ -105,10 +102,6 @@ class PRAISEPredictor(Predictor):
     def __compute_costt_ovhd(times, t_ovhd):
         tmin = times.min(axis=1)
         tmax = times.max(axis=1)
-        costt_ovhd = times.add(
-            t_ovhd['0'], axis="index").sub(
-            tmin, axis="index").div(
+        costt_ovhd = t_ovhd.div(
             tmax - tmin, axis="index").fillna(0.)
-        ## what about nan values? => replace with 0
-        #costt_ovhd = (times + t_ovhd - tmin).div(tmax - tmin)
         return costt_ovhd

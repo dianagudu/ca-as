@@ -225,11 +225,11 @@ class SampleStatsPreprocessor():
         costt = times.sub(tmin, axis='index').div(
             tmax - tmin, axis='index').fillna(0.)
 
-        t_ovhd = pd.DataFrame(times.max(axis=1))
+        t_ovhd = pd.DataFrame(times.sum(axis=1))
 
         # compute stretched welfare
         data = rawsamplestats.df[rawsamplestats.df.ratio == ratio][[
-            "ratio", "instance", "algorithm", "welfare", "time"]]
+            "ratio", "instance", "algorithm", "welfare", "time"]].copy()
         data['welfare_extra'] = data.apply(stretch_welfare, axis=1)
         #data.eval("welfare_extra = welfare / ratio", inplace=True)
 
@@ -374,7 +374,7 @@ class LambdaSampleStatsPreprocessor():
                       ((1 - weight) * self.sstats.costt_extra) ** 2) ** 0.5
         winners_extra = costs_extra.idxmin(axis=1)\
                                    .to_frame()\
-                                   .rename(columns={0: 'winner'})
+                                   .rename(columns={0: 'winner_extra'})
         return LambdaSampleStats(weight, winners, winners_extra)
 
 class DatasetCreator():
@@ -423,18 +423,12 @@ class SamplesDatasetCreator():
         # load raw stats
         rawsamplestats = RawSampleStatsLoader(infolder, name).load()
         ratios = rawsamplestats.ratios
-        #ratios = np.array([.05, .1, .15, .2, .25, .3, .35,
-        #                   .4, .45, .5, .55, .6, .65, .7,
-        #                   .75, .8, .85, .9, .95])
 
         # process and save raw stats
         for ratio in ratios:
             sstats = SampleStatsPreprocessor.process(
                 rawsamplestats, ratio)
             sstats.save(prefix)
-            # process and save lambda stats per ratio
-            #sstats = ProcessedSampleStats.load(
-            #    "%s%.2f.yaml" % (sstats_file_prefix, ratio))
             lssp = LambdaSampleStatsPreprocessor(sstats)
             for weight in weights:
                 lstats = lssp.process(weight)
