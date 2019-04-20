@@ -293,6 +293,6 @@ class PRAISEPostprocessor():
         rmse_best = PRAISEPostprocessor.__filter_rmse_min_ratio(
             rmse.reset_index(), outfolder)
         # save rmse to file for pgfplots
-        np.savetxt(rmse_file, rmse_best.reset_index(), header=True,
+        np.savetxt(rmse_file, rmse_best.reset_index(),
                    fmt="%.1f\t&\t%.2f\t&\t%.2f\t&\t%.8f\t&\t%.8f\t&\t%.8f\t&\t%.8f\t&\t%.8f\t&\t%.8f",
                    newline="\t\\\\\n")
