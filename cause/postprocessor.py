@@ -285,7 +285,7 @@ class PRAISEPostprocessor():
         rmse.loc[:,"rmse_rand"] = mse_praise.mse / mse_rand.mse 
         rmse.loc[:,"rmse_best"] = mse_praise.mse / mse_best.mse
         ### with extrapolation
-        rmse.loc[:, "acc_extra"] = acc_extra.acc
+        rmse.loc[:,"acc_extra"] = acc_extra.acc
         rmse.loc[:,"rmse_extra_rand"] = mse_praise_extra.mse / mse_rand.mse 
         rmse.loc[:,"rmse_extra_best"] = mse_praise_extra.mse / mse_best.mse
 
@@ -293,6 +293,6 @@ class PRAISEPostprocessor():
         rmse_best = PRAISEPostprocessor.__filter_rmse_min_ratio(
             rmse.reset_index(), outfolder)
         # save rmse to file for pgfplots
-        np.savetxt(rmse_file, rmse_best.reset_index(),
+        np.savetxt(rmse_file, rmse_best.reset_index(), header=True,
                    fmt="%.1f\t&\t%.2f\t&\t%.2f\t&\t%.8f\t&\t%.8f\t&\t%.8f\t&\t%.8f\t&\t%.8f\t&\t%.8f",
                    newline="\t\\\\\n")

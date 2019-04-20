@@ -193,16 +193,16 @@ def stretch_time(row):
     """
     if row.algorithm in ['GREEDY1', 'GREEDY2', 'GREEDY3', 'GREEDY1S', 'SA', 'SAS']:
        # extrapolate time value for algorithms with O(nlogn) time complexity
-        row.time = o_nlogn(row.time, row.ratio)
+        new_time = o_nlogn(row.time, row.ratio)
     elif row.algorithm in ['HILL1', 'HILL1S', 'HILL2', 'HILL2S']:
         # extrapolate time value for algorithms with O(n^2logn) time complexity
-        row.time = o_n2logn(row.time, row.ratio)
+        new_time = o_n2logn(row.time, row.ratio)
     else:
         # CASANOVA, CASANOVAS
         # extrapolate time value for algorithms with O(n^2) time complexity
-        row.time = o_n2(row.time, row.ratio)
+        new_time = o_n2(row.time, row.ratio)
             
-    return row.time
+    return new_time
 
 def stretch_welfare(row):
     """extrapolates the welfare value of the full instance from the sample value
@@ -211,18 +211,18 @@ def stretch_welfare(row):
     :returns: dataframe row where welfare column was stretched
     """
     if row.algorithm in ['HILL1']:
-        row.welfare = row.welfare / (row.ratio ** 0.85)
+        new_welfare = row.welfare / (row.ratio ** 0.85)
     elif row.algorithm in ['HILL1S']:
-        row.welfare = row.welfare / (row.ratio ** 0.93)
+        new_welfare = row.welfare / (row.ratio ** 0.93)
     elif row.algorithm in ['GREEDY3']:
-        row.welfare = row.welfare / (row.ratio ** 0.875)
+        new_welfare = row.welfare / (row.ratio ** 0.875)
     elif row.algorithm in ['GREEDY1', 'GREEDY2']:
-        row.welfare = row.welfare / (row.ratio ** 0.86)
+        new_welfare = row.welfare / (row.ratio ** 0.86)
     elif row.algorithm in ['SA', 'SAS', 'GREEDY1S']:
-        row.welfare = row.welfare / (row.ratio ** 0.96)
+        new_welfare = row.welfare / (row.ratio ** 0.96)
     elif row.algorithm in ['HILL2', 'HILL2S']:
-        row.welfare = row.welfare / (row.ratio ** 1.03)
+        new_welfare = row.welfare / (row.ratio ** 1.03)
     else:
         # extrapolate welfare value for algorithms with O(n) welfare complexity
-        row.welfare = row.welfare / row.ratio
-    return row.welfare
+        new_welfare = row.welfare / row.ratio
+    return new_welfare
