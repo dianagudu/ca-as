@@ -191,18 +191,16 @@ def stretch_time(row):
     :param row: one row from all stats for running the algorithms on all instances
     :returns: dataframe row where time column was stretched
     """
-    if row.algorithm in ['GREEDY1', 'GREEDY2', 'GREEDY3', 'GREEDY1S',
-                         'SA', 'SAS']:
+    if row.algorithm in ['GREEDY1', 'GREEDY2', 'GREEDY3', 'GREEDY1S', 'SA', 'SAS']:
        # extrapolate time value for algorithms with O(nlogn) time complexity
         row.time = o_nlogn(row.time, row.ratio)
+    elif row.algorithm in ['HILL1', 'HILL1S', 'HILL2', 'HILL2S']:
+        # extrapolate time value for algorithms with O(n^2logn) time complexity
+        row.time = o_n2logn(row.time, row.ratio)
     else:
-        if row.algorithm in ['HILL1', 'HILL1S', 'HILL2', 'HILL2S']:
-            # extrapolate time value for algorithms with O(n^2logn) time complexity
-            row.time = o_n2logn(row.time, row.ratio)
-        else:
-            # CASANOVA, CASANOVAS
-            # extrapolate time value for algorithms with O(n^2) time complexity
-            row.time = o_n2(row.time, row.ratio)
+        # CASANOVA, CASANOVAS
+        # extrapolate time value for algorithms with O(n^2) time complexity
+        row.time = o_n2(row.time, row.ratio)
             
     return row.time
 
@@ -212,15 +210,19 @@ def stretch_welfare(row):
     :param row: one row from all stats for running the algorithms on all instances
     :returns: dataframe row where welfare column was stretched
     """
-    #if row.algorithm in ['HILL1']:
-    #    # extrapolate time value for algorithms with O(n^0.87) welfare complexity
-    #    row.welfare = row.welfare / (row.ratio ** 0.87)
-    #else:
-    #    if row.algorithm in ['HILL1S']:
-    #        # extrapolate time value for algorithms with O(n^0.94) welfare complexity
-    #        row.welfare = row.welfare / (row.ratio ** 0.94)
-    #    else:
-    #        # extrapolate welfare value for algorithms with O(n) welfare complexity
-    #        row.welfare = row.welfare / row.ratio
-    row.welfare = row.welfare / row.ratio
+    if row.algorithm in ['HILL1']:
+        row.welfare = row.welfare / (row.ratio ** 0.85)
+    elif row.algorithm in ['HILL1S']:
+        row.welfare = row.welfare / (row.ratio ** 0.93)
+    elif row.algorithm in ['GREEDY3']:
+        row.welfare = row.welfare / (row.ratio ** 0.875)
+    elif row.algorithm in ['GREEDY1', 'GREEDY2']:
+        row.welfare = row.welfare / (row.ratio ** 0.86)
+    elif row.algorithm in ['SA', 'SAS', 'GREEDY1S']:
+        row.welfare = row.welfare / (row.ratio ** 0.96)
+    elif row.algorithm in ['HILL2', 'HILL2S']:
+        row.welfare = row.welfare / (row.ratio ** 1.03)
+    else:
+        # extrapolate welfare value for algorithms with O(n) welfare complexity
+        row.welfare = row.welfare / row.ratio
     return row.welfare
