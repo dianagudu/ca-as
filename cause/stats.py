@@ -403,7 +403,7 @@ class LambdaSampleStats():
         winners = pd.read_csv("%s.winners" % filename, index_col='instance')
         winners_extra = pd.read_csv("%s.winners_extra" % filename,
                                     index_col='instance')
-        return LambdaSampleStats(weight, winners_extra, winners)
+        return LambdaSampleStats(weight, winners, winners_extra)
 
     def save(self, filename):
         self.winners.to_csv("%s.winners" % filename, float_format='%g')

@@ -216,7 +216,6 @@ class SampleStatsPreprocessor():
 
         wmin = welfares.min(axis=1)
         wmax = welfares.max(axis=1)
-        ## todo : cost of welfare is wmax - w/...
         costw = (-welfares).add(wmax, axis='index').div(
             wmax - wmin, axis='index').fillna(0.)
 
