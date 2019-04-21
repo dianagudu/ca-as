@@ -184,10 +184,9 @@ def o_nlogn(time, ratio):
     return time_inv / ratio * np.log(time_inv / ratio)
 
 def o_nlogn_n(time, ratio):
-    # inverse of x log x + a x: a / lambertw(a*e^x)
-    a = 10000
-    time_inv = a / lambertw(a * np.exp(time)).real
-    return time_inv / ratio * np.log(time_inv / ratio) + a * time_inv / ratio
+    # inverse of x log x + x: x / lambertw(e x)
+    time_inv = time / lambertw(time * np.exp(1)).real
+    return time_inv / ratio * np.log(time_inv / ratio) + time_inv / ratio
 
 def o_n2logn(time, ratio):
     time_inv = (2 * time / lambertw(2 * time).real) ** (1./2)
