@@ -152,6 +152,9 @@ def func_sqrt(x, a):#, b):
 def func_nlogn(x, a):#, b):
     return a * x * np.log(x)# + b
 
+def func_nlogn_n(x, a, b):
+    return a * x * np.log(x) + b * x
+
 def func_logn(x, a):#, b):
     return a * np.log(x)# + b
 
@@ -180,6 +183,12 @@ def o_nlogn(time, ratio):
     time_inv = time / lambertw(time).real
     return time_inv / ratio * np.log(time_inv / ratio)
 
+def o_nlogn_n(time, ratio):
+    # inverse of x log x + a x: a / lambertw(a*e^x)
+    a = 10000
+    time_inv = a / lambertw(a * np.exp(time)).real
+    return time_inv / ratio * np.log(time_inv / ratio) + a * time_inv / ratio
+
 def o_n2logn(time, ratio):
     time_inv = (2 * time / lambertw(2 * time).real) ** (1./2)
     return (time_inv / ratio) ** 2 * np.log(time_inv / ratio)
@@ -191,12 +200,14 @@ def stretch_time(row):
     :param row: one row from all stats for running the algorithms on all instances
     :returns: dataframe row where time column was stretched
     """
-    if row.algorithm in ['GREEDY1', 'GREEDY2', 'GREEDY3', 'GREEDY1S', 'SA', 'SAS']:
+    if row.algorithm in ['GREEDY1', 'GREEDY2', 'GREEDY3', 'GREEDY1S']:
        # extrapolate time value for algorithms with O(nlogn) time complexity
         new_time = o_nlogn(row.time, row.ratio)
     elif row.algorithm in ['HILL1', 'HILL1S', 'HILL2', 'HILL2S']:
         # extrapolate time value for algorithms with O(n^2logn) time complexity
         new_time = o_n2logn(row.time, row.ratio)
+    elif row.algorithm in ['SA', 'SAS']:
+        new_time = o_nlogn_n(row.time, row.ratio)
     else:
         # CASANOVA, CASANOVAS
         # extrapolate time value for algorithms with O(n^2) time complexity

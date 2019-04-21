@@ -710,4 +710,6 @@ class SampleStatsFit():
             print("time n3logn:",  popt, np.sqrt(np.diag(pcov))*100./popt, "%")
             popt, pcov = curve_fit(func_n2logn, xdata, ydata, bounds=(0, np.inf))
             print("time n2logn:",  popt, np.sqrt(np.diag(pcov))*100./popt, "%")
+            popt, pcov = curve_fit(func_nlogn_n, xdata, ydata, bounds=(0, np.inf))
+            print("time nlogn+n:",  popt, np.sqrt(np.diag(pcov))*100./popt, "%")
 
