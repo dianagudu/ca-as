@@ -199,14 +199,12 @@ def stretch_time(row):
     :param row: one row from all stats for running the algorithms on all instances
     :returns: dataframe row where time column was stretched
     """
-    if row.algorithm in ['GREEDY1', 'GREEDY2', 'GREEDY3', 'GREEDY1S']:
+    if row.algorithm in ['GREEDY1', 'GREEDY2', 'GREEDY3', 'GREEDY1S', 'SA', 'SAS']:
        # extrapolate time value for algorithms with O(nlogn) time complexity
         new_time = o_nlogn(row.time, row.ratio)
     elif row.algorithm in ['HILL1', 'HILL1S', 'HILL2', 'HILL2S']:
         # extrapolate time value for algorithms with O(n^2logn) time complexity
         new_time = o_n2logn(row.time, row.ratio)
-    elif row.algorithm in ['SA', 'SAS']:
-        new_time = o_nlogn_n(row.time, row.ratio)
     else:
         # CASANOVA, CASANOVAS
         # extrapolate time value for algorithms with O(n^2) time complexity

@@ -229,8 +229,8 @@ class SampleStatsPreprocessor():
         # compute stretched welfare
         data = rawsamplestats.df[rawsamplestats.df.ratio == ratio][[
             "ratio", "instance", "algorithm", "welfare", "time"]].copy()
-        data['welfare_extra'] = data.apply(stretch_welfare, axis=1)
-        #data.eval("welfare_extra = welfare / ratio", inplace=True)
+        #data['welfare_extra'] = data.apply(stretch_welfare, axis=1)
+        data.eval("welfare_extra = welfare / ratio", inplace=True)
 
         # compute stretched time
         data['time_extra'] = data.apply(stretch_time, axis=1)
