@@ -202,11 +202,11 @@ def stretch_time(row):
     if row.algorithm in ['GREEDY1', 'GREEDY2', 'GREEDY3', 'GREEDY1S', 'SA', 'SAS']:
        # extrapolate time value for algorithms with O(nlogn) time complexity
         new_time = o_nlogn(row.time, row.ratio)
-    elif row.algorithm in ['HILL1', 'HILL1S', 'HILL2', 'HILL2S']:
+    elif row.algorithm in ['HILL1', 'HILL1S']: #, 'HILL2', 'HILL2S']:
         # extrapolate time value for algorithms with O(n^2logn) time complexity
         new_time = o_n2logn(row.time, row.ratio)
     else:
-        # CASANOVA, CASANOVAS
+        # CASANOVA, CASANOVAS, HILL2, HILL2S
         # extrapolate time value for algorithms with O(n^2) time complexity
         new_time = o_n2(row.time, row.ratio)
             
