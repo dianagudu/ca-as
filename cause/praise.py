@@ -58,8 +58,13 @@ class PRAISEPredictor(Predictor):
         # compute costs with overhead
         costt_ovhd = PRAISEPredictor.__compute_costt_ovhd(
             self.pstats.times, self.sstats.t_ovhd)
-        costs_ovhd = ((self.weight * self.pstats.costw) ** 2 +
-                ((1 - self.weight) * self.pstats.costt.add(costt_ovhd['0'], axis='index')) ** 2) ** 0.5
+        costs_ovhd = (
+                (self.weight * self.pstats.costw) ** 2 +
+                (
+                    (1 - self.weight) *
+                    (self.pstats.costt.add(costt_ovhd['0'], axis='index'))
+                ) ** 2
+            ) ** 0.5
         costs_ovhd = costs_ovhd.values
 
         acc = Evaluator.accuracy(y_true, y_pred)
