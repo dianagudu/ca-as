@@ -76,6 +76,11 @@ class RawStatsLoader():
         # average over multiple runs when needed
         optstats = optstats.groupby(
             ['instance', 'algorithm']).mean().reset_index()
+        # filter instances that don't have results for all algos
+        optstats = optstats.groupby('instance').filter(
+            lambda x: set(x.algorithm.unique()) ==
+                      set([x.name for x in Algorithm_Names])
+        ).reset_index()
         return RawStatsOptimal(self.name, optstats)
 
     def load_random(self):
