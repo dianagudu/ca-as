@@ -157,7 +157,11 @@ def run():
               help='number of threads for parallel training with auto-sklearn')
 @click.argument("name")
 @click.argument("infolder", type=click.Path(exists=True))
+<<<<<<< HEAD
 @click.argument("outfolder", type=click.Path(exists=True))
+=======
+@click.argument("oufolder", type=click.Path(exists=True))
+>>>>>>> 4756d64f42a7c3b38ddc7e8f7afbb39e237cf864
 def run_malaise(name, weights, infolder, outfolder, nthreads):
     """Runs MALAISE algorithm selection on dataset NAME, with processed stats
     and extracted features located in INFOLDER. The trained models and evaluation
@@ -184,7 +188,11 @@ def run_malaise(name, weights, infolder, outfolder, nthreads):
 @run.command(short_help='run PRAISE', name='praise')
 @click.argument("name")
 @click.argument("infolder", type=click.Path(exists=True))
+<<<<<<< HEAD
 @click.argument("outfolder", type=click.Path(exists=True))
+=======
+@click.argument("oufolder", type=click.Path(exists=True))
+>>>>>>> 4756d64f42a7c3b38ddc7e8f7afbb39e237cf864
 def run_praise(name, infolder, outfolder):
     """Runs PRAISE algorithm selection on dataset NAME, with processed stats
     and sample stats located in INFOLDER. The evaluation results (accuracy and
@@ -211,7 +219,11 @@ def run_praise(name, infolder, outfolder):
              name='fitting')
 @click.argument("name")
 @click.argument("infolder", type=click.Path(exists=True))
+<<<<<<< HEAD
 @click.argument("outfolder", type=click.Path(exists=True))
+=======
+@click.argument("oufolder", type=click.Path(exists=True))
+>>>>>>> 4756d64f42a7c3b38ddc7e8f7afbb39e237cf864
 def run_fitting(name, infolder, outfolder):
     """Given the raw sample stats in INFOLDER (time and welfare computed by the
     algorithms over multiple sample sizes, on the dataset given by NAME), it
@@ -238,7 +250,11 @@ def postprocess():
 @postprocess.command(short_help='get dataset breakdown by best algorithm', name='breakdown')
 @click.argument("name")
 @click.argument("infolder", type=click.Path(exists=True))
+<<<<<<< HEAD
 @click.argument("outfolder", type=click.Path(exists=True))
+=======
+@click.argument("oufolder", type=click.Path(exists=True))
+>>>>>>> 4756d64f42a7c3b38ddc7e8f7afbb39e237cf864
 def postprocess_breakdown(name, infolder, outfolder):
     """Takes preprocessed stats in INFOLDER given by NAME, and breaks down the
     dataset based on the best algorithms, for each lambda weight.
@@ -258,7 +274,11 @@ def postprocess_breakdown(name, infolder, outfolder):
 @postprocess.command(short_help='get feature importances', name='features')
 @click.argument("name")
 @click.argument("infolder", type=click.Path(exists=True))
+<<<<<<< HEAD
 @click.argument("outfolder", type=click.Path(exists=True))
+=======
+@click.argument("oufolder", type=click.Path(exists=True))
+>>>>>>> 4756d64f42a7c3b38ddc7e8f7afbb39e237cf864
 def postprocess_features(name, infolder, outfolder):
     """Takes preprocessed stats and extracted features in INFOLDER,
     given by the dataset's NAME, and computes the feature importances using
@@ -284,7 +304,11 @@ def postprocess_features(name, infolder, outfolder):
 @postprocess.command(short_help='postprocess MALAISE results', name='malaise')
 @click.argument("name")
 @click.argument("infolder", type=click.Path(exists=True))
+<<<<<<< HEAD
 @click.argument("outfolder", type=click.Path(exists=True))
+=======
+@click.argument("oufolder", type=click.Path(exists=True))
+>>>>>>> 4756d64f42a7c3b38ddc7e8f7afbb39e237cf864
 def postprocess_malaise(name, infolder, outfolder):
     """Takes the results of running MALAISE on dataset NAME, saved in INFOLDER,
     and saves the accuracy and RMSE values over lambda to OUTFOLDER,
@@ -296,7 +320,11 @@ def postprocess_malaise(name, infolder, outfolder):
 @postprocess.command(short_help='postprocess PRAISE results', name='praise')
 @click.argument("name")
 @click.argument("infolder", type=click.Path(exists=True))
+<<<<<<< HEAD
 @click.argument("outfolder", type=click.Path(exists=True))
+=======
+@click.argument("oufolder", type=click.Path(exists=True))
+>>>>>>> 4756d64f42a7c3b38ddc7e8f7afbb39e237cf864
 def postprocess_praise(name, infolder, outfolder):
     """Takes the results of running PRAISE on dataset NAME, saved in INFOLDER,
     and saves the accuracy and RMSE values over lambda to OUTFOLDER,
