@@ -3,13 +3,18 @@ import click
 import numpy as np
 
 from cause.preprocessor import RawStatsLoader
+from cause.preprocessor import RawSampleStatsLoader
 from cause.preprocessor import FeatureExtractor
 from cause.preprocessor import DatasetCreator
 from cause.preprocessor import SamplesDatasetCreator
+from cause.preprocessor import SampleStatsFit
 
 from cause.stats import ProcessedDataset
+from cause.stats import ProcessedSamplesDataset
 
 from cause.features import Features
+from cause.malaise import MALAISEPredictor
+from cause.praise import PRAISEPredictor
 
 from cause.postprocessor import Postprocessor
 from cause.postprocessor import FeatsPostprocessor
@@ -145,19 +150,78 @@ def run():
 
 
 @run.command(short_help='run MALAISE', name='malaise')
-def run_malaise():
-    pass
+@click.option("--weights", callback=validate_weights,
+              default='0.,.1,.2,.3,.4,.5,.6,.7,.8,.9,1.',
+              help='lambda weights for the cost model (float or list of floats)')
+@click.option("--nthreads", type=int, default=1,
+              help='number of threads for parallel training with auto-sklearn')
+@click.argument("name")
+@click.argument("infolder", type=click.Path(exists=True))
+@click.argument("oufolder", type=click.Path(exists=True))
+def run_malaise(name, weights, infolder, outfolder, nthreads):
+    """Runs MALAISE algorithm selection on dataset NAME, with processed stats
+    and extracted features located in INFOLDER. The trained models and evaluation
+    results (accuracy and MSE error) are saved to OUTFOLDER, as well as results
+    for random selection and best algorithm selection, to be used for comparison.
+
+    The training uses auto-ml to find the best hyperparameters, and it can be
+    done in parallel if nthreads are given.
+
+    The weights used in the cost model to determine the best algorithm are passed
+    as a comma-separated list of positive floats (or a single value), with the
+    default value: '0.,.1,.2,.3,.4,.5,.6,.7,.8,.9,1.'.
+    """
+    # load processed features
+    feats = Features.load("%s/%s_features.yaml" % (infolder, name))
+    # load processed dataset
+    ds = ProcessedDataset.load("%s/%s.yaml" % (infolder, name))
+    # run MALAISE for each given weight
+    for weight in ds.weights:
+        MALAISEPredictor(ds.lstats[weight], feats).run(
+            outfolder=outfolder, num_processes=nthreads)
 
 
 @run.command(short_help='run PRAISE', name='praise')
-def run_praise():
-    pass
+@click.argument("name")
+@click.argument("infolder", type=click.Path(exists=True))
+@click.argument("oufolder", type=click.Path(exists=True))
+def run_praise(name, infolder, outfolder):
+    """Runs PRAISE algorithm selection on dataset NAME, with processed stats
+    and sample stats located in INFOLDER. The evaluation results (accuracy and
+    MSE error) are saved to OUTFOLDER, as well as results for random selection
+    and best algorithm selection, to be used for comparison.
+
+    The weights used in the cost model to determine the best algorithm, as well
+    as the sampling ratios, are taken from the processed stats.
+    """
+    ## load samples dataset
+    sds = ProcessedSamplesDataset.load("%s/%s_samples.yaml" % (infolder, name))
+    ## load full instance dataset
+    fds = ProcessedDataset.load("%s/%s.yaml" % (infolder, name))
+    ## run PRAISE on all lambda weights
+    for weight in fds.weights:
+        for ratio in sds.ratios:
+            PRAISEPredictor(
+                fds.pstats, fds.lstats[weight],
+                sds.sstats[ratio], sds.lstats[ratio][weight]
+                ).run(outfolder=outfolder)
 
 
 @run.command(short_help='curve fitting for scaling behavior over problem size',
              name='fitting')
-def run_fitting():
-    pass
+@click.argument("name")
+@click.argument("infolder", type=click.Path(exists=True))
+@click.argument("oufolder", type=click.Path(exists=True))
+def run_fitting(name, infolder, outfolder):
+    """Given the raw sample stats in INFOLDER (time and welfare computed by the
+    algorithms over multiple sample sizes, on the dataset given by NAME), it
+    performs curve fitting for multiple functions to determine scaling behavior
+    of each algorithm for time and welfare over problem size.
+    The results are printed to standard output.
+    """
+    allstats = RawSampleStatsLoader(infolder, name).load()
+    SampleStatsFit.fit_welfare(allstats)
+    SampleStatsFit.fit_time(allstats)
 
 
 # postprocess breakdown
@@ -172,9 +236,17 @@ def postprocess():
 
 
 @postprocess.command(short_help='get dataset breakdown by best algorithm', name='breakdown')
-def postprocess_breakdown(name, outfolder):
+@click.argument("name")
+@click.argument("infolder", type=click.Path(exists=True))
+@click.argument("oufolder", type=click.Path(exists=True))
+def postprocess_breakdown(name, infolder, outfolder):
+    """Takes preprocessed stats in INFOLDER given by NAME, and breaks down the
+    dataset based on the best algorithms, for each lambda weight.
+    The breakdown is then saved to OUTFOLDER using the given name, as a heatmap
+    image, as well as a text file in tabular format.
+    """
     # load processed dataset
-    ds = ProcessedDataset.load("%s/%s.yaml" % (outfolder, name))
+    ds = ProcessedDataset.load("%s/%s.yaml" % (infolder, name))
     ## get breakdown by algorithms and weights
     breakdown = Postprocessor(ds).breakdown()
     ## save to file for latex table
@@ -184,11 +256,22 @@ def postprocess_breakdown(name, outfolder):
 
 
 @postprocess.command(short_help='get feature importances', name='features')
-def postprocess_features(name, outfolder):
+@click.argument("name")
+@click.argument("infolder", type=click.Path(exists=True))
+@click.argument("oufolder", type=click.Path(exists=True))
+def postprocess_features(name, infolder, outfolder):
+    """Takes preprocessed stats and extracted features in INFOLDER,
+    given by the dataset's NAME, and computes the feature importances using
+    tree-based classifiers, for each lambda weight, as well as on average over
+    lambda.
+    The importances are then saved to OUTFOLDER using the given name, as text
+    files in tabular format. A feature heatmap expressing correlations between
+    features is also created.
+    """
     # load processed features
-    feats = Features.load("%s/%s_features.yaml" % (outfolder, name))
+    feats = Features.load("%s/%s_features.yaml" % (infolder, name))
     # load processed stats
-    ds = ProcessedDataset.load("%s/%s.yaml" % (outfolder, name))
+    ds = ProcessedDataset.load("%s/%s.yaml" % (infolder, name))
     ## postprocessing: feature importances
     fpostp = FeatsPostprocessor(ds, feats)
     fpostp.save_feature_importances(outfolder)
@@ -199,13 +282,27 @@ def postprocess_features(name, outfolder):
 
 
 @postprocess.command(short_help='postprocess MALAISE results', name='malaise')
-def postprocess_malaise(name, outfolder):
-    MALAISEPostprocessor("%s/%s_stats" % (outfolder, name)).save(outfolder)
+@click.argument("name")
+@click.argument("infolder", type=click.Path(exists=True))
+@click.argument("oufolder", type=click.Path(exists=True))
+def postprocess_malaise(name, infolder, outfolder):
+    """Takes the results of running MALAISE on dataset NAME, saved in INFOLDER,
+    and saves the accuracy and RMSE values over lambda to OUTFOLDER,
+    using the given name, as text files in tabular format.
+    """
+    MALAISEPostprocessor("%s/%s_stats" % (infolder, name)).save(outfolder)
 
 
 @postprocess.command(short_help='postprocess PRAISE results', name='praise')
-def postprocess_praise(name, outfolder):
-    PRAISEPostprocessor("%s/%s_stats" % (outfolder, name)).save(outfolder)
+@click.argument("name")
+@click.argument("infolder", type=click.Path(exists=True))
+@click.argument("oufolder", type=click.Path(exists=True))
+def postprocess_praise(name, infolder, outfolder):
+    """Takes the results of running PRAISE on dataset NAME, saved in INFOLDER,
+    and saves the accuracy and RMSE values over lambda to OUTFOLDER,
+    using the given name, as text files in tabular format.
+    """
+    PRAISEPostprocessor("%s/%s_stats" % (infolder, name)).save(outfolder)
 
 
 if __name__ == '__main__':
