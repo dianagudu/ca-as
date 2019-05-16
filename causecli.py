@@ -30,7 +30,7 @@ def validate_weights(ctx, param, value):
         return None
 
     def positive_float(f):
-        if float(f) <= 0:
+        if float(f) < 0:
             raise ValueError(None)
         else:
             return float(f)
@@ -38,7 +38,7 @@ def validate_weights(ctx, param, value):
     try:
         return np.array([positive_float(x) for x in value.split(",")])
     except ValueError:
-        raise click.BadParameter('%s should be a comma-separated list of floats > 0, not \'%s\'' % (param.name, value))
+        raise click.BadParameter('%s should be a comma-separated list of floats >= 0, not \'%s\'' % (param.name, value))
 
 
 @click.group()
