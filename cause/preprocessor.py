@@ -230,6 +230,7 @@ class SampleStatsPreprocessor():
             tmax - tmin, axis='index').fillna(0.)
 
         t_ovhd = pd.DataFrame(times.sum(axis=1))
+        #t_ovhd = pd.DataFrame(times.max(axis=1))
 
         # compute stretched welfare
         data = rawsamplestats.df[rawsamplestats.df.ratio == ratio][[

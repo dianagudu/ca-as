@@ -44,28 +44,36 @@ class PRAISEPredictor(Predictor):
 
         stats_file = "%s/%s_stats" % (outfolder, self.name)
 
-        y_true = self.lstats.winners.values
+        index = self.lstats_sample.winners.index
+
+        y_true = self.lstats.winners.loc[index].values
         y_pred = self.lstats_sample.winners.values
         y_pred_extra = self.lstats_sample.winners_extra.values
-        costs = self.lstats.costs.values
+        costs = self.lstats.costs.loc[index]
         
         # encode class labels to numbers
         le = LabelEncoder().fit(self.lstats.costs.columns.values)
         y_true = le.transform(y_true)
         y_pred = le.transform(y_pred)
         y_pred_extra = le.transform(y_pred_extra)
+        y_true = np.reshape(y_true, (y_true.shape[0], 1))
+        y_pred = np.reshape(y_pred, (y_pred.shape[0], 1))
+        y_pred_extra = np.reshape(y_pred_extra, (y_pred_extra.shape[0], 1))
+        # reorder cost columns to be sorted in encoded order
+        new_costs_columns = le.inverse_transform(np.sort(le.transform(costs.columns)))
+        costs = costs[new_costs_columns].values
 
         # compute costs with overhead
         costt_ovhd = PRAISEPredictor.__compute_costt_ovhd(
-            self.pstats.times, self.sstats.t_ovhd)
+            self.pstats.times.loc[index], self.sstats.t_ovhd)
         costs_ovhd = (
-                (self.weight * self.pstats.costw) ** 2 +
+                (self.weight * self.pstats.costw.loc[index]) ** 2 +
                 (
                     (1 - self.weight) *
-                    (self.pstats.costt.add(costt_ovhd['0'], axis='index'))
+                    (self.pstats.costt.loc[index].add(costt_ovhd['0'], axis='index'))
                 ) ** 2
             ) ** 0.5
-        costs_ovhd = costs_ovhd.values
+        costs_ovhd = costs_ovhd[new_costs_columns].values
 
         acc = Evaluator.accuracy(y_true, y_pred)
         mse = Evaluator.mre_ovhd(y_true, y_pred, costs, costs_ovhd)

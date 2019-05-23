@@ -218,18 +218,20 @@ def stretch_welfare(row):
     :param row: one row from all stats for running the algorithms on all instances
     :returns: dataframe row where welfare column was stretched
     """
-    if row.algorithm in ['HILL1']:
-        new_welfare = row.welfare / (row.ratio ** 0.85)
-    elif row.algorithm in ['HILL1S']:
+    if row.algorithm in ['HILL1S']:
         new_welfare = row.welfare / (row.ratio ** 0.93)
     elif row.algorithm in ['GREEDY3']:
-        new_welfare = row.welfare / (row.ratio ** 0.875)
-    elif row.algorithm in ['GREEDY1', 'GREEDY2']:
-        new_welfare = row.welfare / (row.ratio ** 0.86)
-    elif row.algorithm in ['SA', 'SAS', 'GREEDY1S']:
+        new_welfare = row.welfare / (row.ratio ** 0.87)
+    elif row.algorithm in ['GREEDY1', 'GREEDY2', 'HILL1']:
+        new_welfare = row.welfare / (row.ratio ** 0.85)
+    elif row.algorithm in ['SA', 'SAS']:
         new_welfare = row.welfare / (row.ratio ** 0.96)
-    elif row.algorithm in ['HILL2', 'HILL2S']:
+    elif row.algorithm in ['GREEDY1S']:
+        new_welfare = row.welfare / (row.ratio ** 0.97)
+    elif row.algorithm in ['HILL2']:
         new_welfare = row.welfare / (row.ratio ** 1.03)
+    elif row.algorithm in ['HILL2S']:
+        new_welfare = row.welfare / (row.ratio ** 1.02)
     else:
         # extrapolate welfare value for algorithms with O(n) welfare complexity
         new_welfare = row.welfare / row.ratio
