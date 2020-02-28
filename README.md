@@ -13,7 +13,7 @@ This repository implements two approaches for algorithm selection:
 ### prerequisites
 
 * all libs in [requirements.txt](requirements.txt)
-* [auto-sklearn](https://automl.github.io/auto-sklearn/stable/) v0.5.0
+* [auto-sklearn](https://automl.github.io/auto-sklearn/stable/) (tested with v0.5.0)
 * [CAGE](https://github.com/dianagudu/ca-ingen): input generator for combinatorial auctions
     * download and add to PYTHONPATH
 * data for training and testing the two approaches (see [ca-eval](https://github.com/dianagudu/ca-eval))
